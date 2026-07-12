@@ -1,0 +1,11 @@
+# Archive générée à partir de ce dossier — inutile dans le dépôt (GitHub Pages sert les fichiers directement)
+*.zip
+
+# Fichiers système
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Éditeurs
+.vscode/
+*.swp

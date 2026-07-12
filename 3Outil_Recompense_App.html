@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Outil de récompense — Femmes et Jeunes</title>
+
+<!-- Installation sur écran d'accueil (Android + iPhone) et fonctionnement hors ligne -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1F4E79">
+<link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OReFJ-PAIE">
+<style>
+  :root{
+    --blue:#1F4E79; --blue-dark:#153a5c; --green:#2E7D32; --green-bg:#EAF3DE;
+    --bg:#F5F6F8; --card:#FFFFFF; --border:#DADFE5; --text:#222833; --muted:#6B7280;
+    --yellow:#FFF6C8; --danger:#B3261E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--text); padding-bottom:70px;
+  }
+  header{
+    background:var(--blue); color:#fff; padding:16px 16px 12px;
+    position:sticky; top:0; z-index:10;
+  }
+  header h1{margin:0; font-size:18px; font-weight:700;}
+  header p{margin:4px 0 0; font-size:12.5px; opacity:.85;}
+  nav{
+    display:flex; background:var(--blue-dark); position:sticky; top:56px; z-index:10;
+    overflow-x:auto;
+  }
+  nav button{
+    flex:1; min-width:80px; background:none; border:none; color:#cfe0f0;
+    padding:11px 6px; font-size:12.5px; font-weight:600; cursor:pointer;
+    border-bottom:3px solid transparent; white-space:nowrap;
+  }
+  nav button.active{color:#fff; border-bottom-color:#FFC94A;}
+  main{padding:14px;}
+  .tab{display:none;}
+  .tab.active{display:block;}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:10px;
+    padding:14px; margin-bottom:14px;
+  }
+  .card h2{margin:0 0 10px; font-size:15px; color:var(--blue);}
+  .card h3{margin:14px 0 8px; font-size:13.5px; color:var(--blue);}
+  label{display:block; font-size:12.5px; color:var(--muted); margin:10px 0 4px; font-weight:600;}
+  input, select{
+    width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:7px;
+    font-size:14px; background:#fff; color:var(--text);
+  }
+  input:focus, select:focus{outline:2px solid var(--blue); outline-offset:1px;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+  .btn{
+    display:inline-block; padding:10px 16px; border-radius:8px; border:none;
+    font-size:14px; font-weight:700; cursor:pointer; text-align:center;
+  }
+  .btn-primary{background:var(--blue); color:#fff; width:100%; margin-top:14px;}
+  .btn-primary:active{background:var(--blue-dark);}
+  .btn-secondary{background:#fff; color:var(--blue); border:1.5px solid var(--blue);}
+  .btn-danger{background:none; color:var(--danger); border:none; font-weight:700; padding:4px 6px; font-size:12.5px;}
+  .btn-edit{background:none; color:var(--blue); border:none; font-weight:700; padding:4px 6px; font-size:12.5px;}
+  .entry{
+    border:1px solid var(--border); border-radius:9px; padding:10px 12px; margin-bottom:10px;
+    background:#fff;
+  }
+  .entry-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;}
+  .entry-actions{display:flex; flex-wrap:wrap; gap:2px; justify-content:flex-end;}
+  .entry-name{font-weight:700; font-size:14px;}
+  .entry-sub{font-size:12px; color:var(--muted); margin-top:2px;}
+  .entry-total{font-size:16px; font-weight:800; color:var(--green); margin-top:6px;}
+  .pill{
+    display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px;
+    background:var(--green-bg); color:var(--green); margin-top:6px; margin-right:6px;
+  }
+  .pill-ouvert{background:var(--green-bg); color:var(--green);}
+  .pill-cloture{background:#EDEFF3; color:var(--muted);}
+  .modalite{font-size:12px; color:var(--muted); margin-top:4px; font-style:italic;}
+  .empty{color:var(--muted); font-size:13.5px; text-align:center; padding:30px 10px;}
+  .param-row{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:10px 0; border-bottom:1px solid var(--border);
+  }
+  .param-row:last-child{border-bottom:none;}
+  .param-label{font-size:13px; flex:1;}
+  .param-note{font-size:11px; color:var(--muted); display:block; margin-top:2px;}
+  .param-input{width:100px; text-align:right; background:var(--yellow); border-color:#E8D66B;}
+  .synth-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;}
+  .synth-box{background:var(--green-bg); border-radius:9px; padding:12px; text-align:center;}
+  .synth-box .num{font-size:20px; font-weight:800; color:var(--green);}
+  .synth-box .lbl{font-size:11.5px; color:#3B6D11; margin-top:2px;}
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  th,td{text-align:left; padding:7px 6px; border-bottom:1px solid var(--border);}
+  th{color:var(--muted); font-weight:600;}
+  .help-item{margin-bottom:12px; font-size:13.5px; line-height:1.5;}
+  .help-item b{color:var(--blue);}
+  .toast{
+    position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+    background:#222833; color:#fff; padding:10px 18px; border-radius:20px;
+    font-size:13px; opacity:0; pointer-events:none; transition:opacity .25s; z-index:50;
+  }
+  .toast.show{opacity:1;}
+  .actions-row{display:flex; gap:8px; margin-top:10px;}
+  .actions-row .btn{flex:1;}
+  .footer-note{font-size:11px; color:var(--muted); text-align:center; margin-top:6px;}
+
+  .activity-block{
+    border:1.5px solid var(--border); border-radius:9px; padding:12px; margin-bottom:12px;
+    background:#FAFBFC; position:relative;
+  }
+  .activity-block .activity-title{font-size:12.5px; font-weight:700; color:var(--blue); margin-bottom:8px;}
+  .activity-block .remove-activity{
+    position:absolute; top:8px; right:8px; background:none; border:none; color:var(--danger);
+    font-size:12px; font-weight:700; cursor:pointer; padding:2px 6px;
+  }
+  .activity-block .precision-row{display:none;}
+  .activity-block .precision-row.show{display:block;}
+  .activity-tags{display:flex; flex-wrap:wrap; gap:5px; margin-top:6px;}
+  .activity-tag{
+    display:inline-block; font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:20px;
+    background:#EDEFF3; color:#444;
+  }
+
+  /* ===================== BULLETIN D'IMPRESSION (A4 vertical) ===================== */
+  #print-area{display:none;}
+  .bulletin{
+    width:100%; padding:0; font-family:Georgia,"Times New Roman",serif; color:#111;
+  }
+  .bulletin .b-header{text-align:center; margin-bottom:18px;}
+  .bulletin .b-header .b-rep{font-size:13px; letter-spacing:1px;}
+  .bulletin .b-header .b-prog{font-size:12px; color:#444; margin-top:2px;}
+  .bulletin .b-header h1{
+    font-size:18px; margin:14px 0 2px; text-transform:uppercase; letter-spacing:.5px;
+  }
+  .bulletin .b-header .b-sub{font-size:12px; color:#444;}
+  .bulletin hr{border:none; border-top:2px solid #111; margin:14px 0;}
+  .bulletin .b-infos{width:100%; border-collapse:collapse; margin-bottom:14px; font-size:13px;}
+  .bulletin .b-infos td{padding:5px 4px; vertical-align:top;}
+  .bulletin .b-infos td.b-label{color:#555; width:38%;}
+  .bulletin .b-infos td.b-value{font-weight:bold;}
+  .bulletin table.b-table{width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:12.5px;}
+  .bulletin table.b-table th, .bulletin table.b-table td{
+    border:1px solid #333; padding:7px 8px; text-align:right;
+  }
+  .bulletin table.b-table th{background:#eee; text-align:center;}
+  .bulletin table.b-table td:first-child, .bulletin table.b-table th:first-child{text-align:left;}
+  .bulletin table.b-table tr.b-total td{font-weight:bold; font-size:13.5px; background:#f5f5f5;}
+  .bulletin .b-montant-box{
+    border:1.5px solid #111; padding:12px 14px; margin:16px 0; border-radius:2px;
+  }
+  .bulletin .b-montant-box .b-row{margin-bottom:6px; font-size:13px;}
+  .bulletin .b-montant-box .b-row b{font-size:14px;}
+  .bulletin .b-lettres{font-style:italic;}
+  .bulletin .b-modalite{
+    font-size:12px; margin:14px 0; padding:10px 12px; background:#f7f7f7; border-left:3px solid #1F4E79;
+  }
+  .bulletin .b-signatures{
+    display:flex; justify-content:space-between; margin-top:50px; font-size:12px;
+  }
+  .bulletin .b-signatures div{width:45%; text-align:center;}
+  .bulletin .b-signatures .b-line{border-top:1px solid #111; margin-top:45px; padding-top:5px;}
+  .bulletin .b-footer{
+    position:fixed; bottom:8mm; left:0; right:0; text-align:center;
+    font-size:8.5px; font-style:italic; color:#999; line-height:1.5;
+  }
+  .bulletin .b-date{font-size:12px; margin-top:24px; text-align:right;}
+
+  @media print{
+    body *{visibility:hidden;}
+    #print-area, #print-area *{visibility:visible;}
+    #print-area{display:block; position:absolute; top:0; left:0; width:100%;}
+    header, nav, .toast{display:none !important;}
+    @page{size:A4 portrait; margin:16mm;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Outil de récompense — Femmes et Jeunes</h1>
+  <p>Filières lait et viande · Programme PAIE · Fonctionne hors connexion</p>
+</header>
+
+<nav>
+  <button class="tab-btn active" data-tab="saisie">Saisie</button>
+  <button class="tab-btn" data-tab="parametres">Paramètres</button>
+  <button class="tab-btn" data-tab="synthese">Synthèse</button>
+  <button class="tab-btn" data-tab="aide">Aide</button>
+</nav>
+
+<main>
+
+  <!-- ===================== SAISIE ===================== -->
+  <div class="tab active" id="tab-saisie">
+    <div class="card">
+      <h2>Créer un compte</h2>
+      <p style="font-size:12.5px;color:var(--muted);margin-top:0;">Renseignez l'identité, puis soit remplissez tout de suite les activités (relevé papier de fin de mois), soit laissez-les vides et utilisez "+ Pointer" chaque jour depuis la liste des comptes.</p>
+
+      <label for="f-nom">Nom et prénom</label>
+      <input id="f-nom" type="text" placeholder="Ex : Aïssatou Diallo">
+
+      <div class="row2">
+        <div>
+          <label for="f-sexe">Sexe</label>
+          <select id="f-sexe">
+            <option value="">—</option>
+            <option value="F">Femme</option>
+            <option value="H">Homme</option>
+          </select>
+        </div>
+        <div>
+          <label for="f-age">Âge</label>
+          <input id="f-age" type="number" min="0" max="100" inputmode="numeric" placeholder="Ex : 22" onblur="clampField(this,0,100)">
+        </div>
+      </div>
+
+      <label for="f-structure">Structure / Ménage</label>
+      <input id="f-structure" type="text" placeholder="Ex : Ménage Diallo">
+
+      <label for="f-periode">Période concernée (mois)</label>
+      <input id="f-periode" type="month" inputmode="numeric">
+
+      <h3>Activités réalisées</h3>
+      <div id="activities-container"></div>
+      <button type="button" class="btn btn-secondary" style="width:100%; margin-top:8px;" onclick="addActivityBlock()">+ Ajouter une autre activité</button>
+
+      <button class="btn btn-primary" onclick="saveEntry()" id="save-btn">Créer le compte</button>
+    </div>
+
+    <div class="card">
+      <h2>Comptes (<span id="count-entries">0</span>)</h2>
+      <div id="entries-list"><div class="empty">Aucun compte enregistré pour l'instant.</div></div>
+    </div>
+  </div>
+
+  <!-- ===================== PARAMETRES ===================== -->
+  <div class="tab" id="tab-parametres">
+    <div class="card">
+      <h2>Tarifs de référence</h2>
+      <div class="param-row">
+        <div class="param-label">Tarif par litre de lait
+          <span class="param-note">FCFA par litre collecté ou transformé</span>
+        </div>
+        <input class="param-input" id="p-litre" type="number" min="0">
+      </div>
+      <div class="param-row">
+        <div class="param-label">Tarif par tête de bétail
+          <span class="param-note">FCFA par tête gardée / mois</span>
+        </div>
+        <input class="param-input" id="p-tete" type="number" min="0">
+      </div>
+      <div class="param-row">
+        <div class="param-label">Tarif par kilomètre
+          <span class="param-note">FCFA par km parcouru</span>
+        </div>
+        <input class="param-input" id="p-km" type="number" min="0">
+      </div>
+      <div class="param-row">
+        <div class="param-label">Tarif horaire
+          <span class="param-note">FCFA par heure de travail</span>
+        </div>
+        <input class="param-input" id="p-heure" type="number" min="0">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Seuils d'âge (gestion du compte)</h2>
+      <div class="param-row">
+        <div class="param-label">Seuil 1
+          <span class="param-note">En dessous : compte géré par un adulte responsable</span>
+        </div>
+        <input class="param-input" id="p-seuil1" type="number" min="0">
+      </div>
+      <div class="param-row">
+        <div class="param-label">Seuil 2
+          <span class="param-note">Jusqu'à cet âge : carnet gardé par la famille</span>
+        </div>
+        <input class="param-input" id="p-seuil2" type="number" min="0">
+      </div>
+      <div class="param-row">
+        <div class="param-label">Seuil 3
+          <span class="param-note">Jusqu'à cet âge : gestion autonome confirmée</span>
+        </div>
+        <input class="param-input" id="p-seuil3" type="number" min="0">
+      </div>
+      <button class="btn btn-primary" onclick="saveParams()">Enregistrer les paramètres</button>
+    </div>
+  </div>
+
+  <!-- ===================== SYNTHESE ===================== -->
+  <div class="tab" id="tab-synthese">
+    <div class="card">
+      <h2>Total général</h2>
+      <div class="synth-grid">
+        <div class="synth-box"><div class="num" id="s-total-personnes">0</div><div class="lbl">Personnes recensées</div></div>
+        <div class="synth-box"><div class="num" id="s-total-fcfa">0</div><div class="lbl">Total récompenses (FCFA)</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Répartition par sexe</h2>
+      <table>
+        <tr><th></th><th>Nombre</th><th>Total (FCFA)</th><th>Moyenne</th></tr>
+        <tr><td>Femmes</td><td id="sx-f-n">0</td><td id="sx-f-t">0</td><td id="sx-f-m">0</td></tr>
+        <tr><td>Hommes</td><td id="sx-h-n">0</td><td id="sx-h-t">0</td><td id="sx-h-m">0</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Répartition par tranche d'âge</h2>
+      <table id="tranche-table">
+        <tr><th>Tranche</th><th>Nombre</th><th>Total (FCFA)</th><th>Moyenne</th></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Export</h2>
+      <p style="font-size:12.5px;color:var(--muted);margin-top:0;">Télécharger toutes les données saisies dans un fichier tableur (CSV), pour archivage ou transmission.</p>
+      <button class="btn btn-secondary" style="width:100%;" onclick="exportCSV()">Exporter en CSV</button>
+    </div>
+  </div>
+
+  <!-- ===================== AIDE ===================== -->
+  <div class="tab" id="tab-aide">
+    <div class="card">
+      <h2>Comment utiliser l'outil</h2>
+      <div class="help-item"><b>1.</b> Dans l'onglet <b>Paramètres</b>, vérifiez ou ajustez les tarifs selon ce qui a été convenu avec les éleveurs.</div>
+      <div class="help-item"><b>2.</b> Dans l'onglet <b>Saisie</b>, ajoutez une fiche par personne. Une même personne peut cumuler plusieurs types de tâches (ex : une femme qui garde aussi le troupeau) — remplissez tous les champs qui la concernent, laissez les autres vides.</div>
+      <div class="help-item"><b>3.</b> L'onglet <b>Synthèse</b> affiche automatiquement la répartition des récompenses par sexe et par tranche d'âge, pour vérifier l'équilibre global.</div>
+      <div class="help-item"><b>4.</b> Toutes les données restent enregistrées sur ce téléphone, même sans connexion internet, même après avoir fermé l'application.</div>
+      <div class="help-item"><b>5.</b> Utilisez <b>Exporter en CSV</b> pour garder une trace ou transmettre les données à quelqu'un d'autre.</div>
+    </div>
+    <div class="card">
+      <h2>Règles de gestion selon l'âge</h2>
+      <div class="help-item"><b>Moins de 18 ans :</b> compte ouvert au nom de la personne, géré par un adulte responsable de la famille.</div>
+      <div class="help-item"><b>18 à 30 ans :</b> compte au nom du jeune ; le carnet est gardé par un membre désigné de la famille (versements uniquement, pas de retrait libre).</div>
+      <div class="help-item"><b>30 à 35 ans :</b> gestion autonome complète.</div>
+      <div class="help-item"><b>Plus de 35 ans :</b> gestion autonome (adulte).</div>
+      <p style="font-size:12px;color:var(--muted);">Ces seuils sont des propositions à valider avec les éleveurs ; ils sont modifiables dans l'onglet Paramètres.</p>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<div id="print-area">
+  <div class="bulletin" id="bulletin-content"></div>
+</div>
+
+<script>
+// ============================================================
+// DONNÉES — persistance locale (fonctionne hors connexion)
+// ============================================================
+const STORAGE_KEY = "outil_recompense_v1";
+
+const DEFAULT_PARAMS = {
+  litre: 50, tete: 500, km: 100, heure: 50,
+  seuil1: 18, seuil2: 30, seuil3: 35,
+};
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return { params: { ...DEFAULT_PARAMS }, entries: [] };
+}
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let state = loadState();
+if (!state.params) state.params = { ...DEFAULT_PARAMS };
+if (!state.entries) state.entries = [];
+
+// Migration : les fiches créées avant l'introduction des comptes ouverts/clôturés
+// deviennent "ouvertes" par défaut, pour bénéficier immédiatement du pointage et de la clôture.
+let migrated = false;
+state.entries.forEach(e => {
+  if (!e.statut) { e.statut = "ouvert"; migrated = true; }
+});
+if (migrated) saveState();
+
+let editingId = null;
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    if (btn.dataset.tab === "synthese") renderSynthese();
+  });
+});
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+// ============================================================
+// CALCULS
+// ============================================================
+function calcActivity(a, params) {
+  const litres = TACHES_AVEC_LITRES.includes(a.type) ? (parseFloat(a.litres) || 0) : 0;
+  const tetes = TACHES_AVEC_TETES.includes(a.type) ? (parseFloat(a.tetes) || 0) : 0;
+  const distance = parseFloat(a.distance) || 0;
+  const heures = parseFloat(a.heures) || 0;
+  const jours = parseFloat(a.jours) || 0;
+  const tarifHeureEffectif = (a.type === "Autre" && a.tarifHeurePerso !== undefined && a.tarifHeurePerso !== "")
+    ? (parseFloat(a.tarifHeurePerso) || 0)
+    : params.heure;
+
+  const remLait = litres * params.litre;
+  const remTete = tetes * params.tete;
+  const remDistance = distance * params.km;
+  const remHeures = heures * jours * tarifHeureEffectif;
+  return { remLait, remTete, remDistance, remHeures, tarifHeureEffectif, total: remLait + remTete + remDistance + remHeures };
+}
+
+function calcEntry(e, params) {
+  const activites = e.activites && e.activites.length ? e.activites : [e]; // compat anciennes fiches
+  let remLait = 0, remTete = 0, remDistance = 0, remHeures = 0;
+  activites.forEach(a => {
+    const c = calcActivity(a, params);
+    remLait += c.remLait; remTete += c.remTete; remDistance += c.remDistance; remHeures += c.remHeures;
+  });
+  const total = remLait + remTete + remDistance + remHeures;
+
+  let tranche = "";
+  let modalite = "";
+  const age = parseFloat(e.age);
+  if (!isNaN(age)) {
+    if (age < params.seuil1) {
+      tranche = "Moins de " + params.seuil1 + " ans";
+      modalite = "Compte géré par un adulte responsable de la famille";
+    } else if (age <= params.seuil2) {
+      tranche = params.seuil1 + " à " + params.seuil2 + " ans";
+      modalite = "Compte au nom du jeune ; carnet gardé par un membre de la famille (versements uniquement)";
+    } else if (age <= params.seuil3) {
+      tranche = params.seuil2 + " à " + params.seuil3 + " ans";
+      modalite = "Gestion autonome complète";
+    } else {
+      tranche = "Plus de " + params.seuil3 + " ans";
+      modalite = "Gestion autonome (adulte)";
+    }
+  }
+  return { remLait, remTete, remDistance, remHeures, total, tranche, modalite };
+}
+
+// Regroupe les activités (ex: plusieurs pointages quotidiens de "Traite") par type de tâche,
+// pour que le bulletin affiche un cumul par activité plutôt qu'une ligne par jour pointé
+// (le générateur PDF ne gère pas la pagination : sans agrégation, un mois de pointages
+// quotidiens ferait déborder la page).
+function aggregateActivites(activites, params) {
+  const groups = {};
+  const order = [];
+  activites.forEach(a => {
+    const key = a.type === "Autre" ? "Autre:" + (a.precision || "") : (a.type || "");
+    if (!groups[key]) {
+      groups[key] = {
+        type: a.type, precision: a.precision,
+        litres: 0, tetes: 0, distance: 0, heuresTotal: 0, joursCount: 0,
+        remLait: 0, remTete: 0, remDistance: 0, remHeures: 0,
+      };
+      order.push(key);
+    }
+    const g = groups[key];
+    const ac = calcActivity(a, params);
+    const heures = parseFloat(a.heures) || 0;
+    const jours = parseFloat(a.jours) || 0;
+    g.litres += parseFloat(a.litres) || 0;
+    g.tetes += parseFloat(a.tetes) || 0;
+    g.distance += parseFloat(a.distance) || 0;
+    g.heuresTotal += heures * jours;
+    g.joursCount += jours;
+    g.remLait += ac.remLait;
+    g.remTete += ac.remTete;
+    g.remDistance += ac.remDistance;
+    g.remHeures += ac.remHeures;
+  });
+  return order.map(key => groups[key]);
+}
+
+function fmt(n) {
+  return Math.round(n).toLocaleString("fr-FR");
+}
+
+function fmtQty(n) {
+  return (Math.round(n * 100) / 100).toString();
+}
+
+function formatPeriode(value) {
+  if (!value) return "";
+  const MOIS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+  const parts = value.split("-");
+  if (parts.length !== 2) return value;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return value;
+  return MOIS[m - 1] + " " + y;
+}
+
+function clampField(el, min, max) {
+  if (el.value === "") return;
+  let v = parseFloat(el.value);
+  if (isNaN(v)) { el.value = ""; return; }
+  if (v < min) v = min;
+  if (v > max) v = max;
+  el.value = v;
+}
+
+// ============================================================
+// SAISIE — activités multiples
+// ============================================================
+let activityCounter = 0;
+
+const TACHES_AVEC_LITRES = ["Traite", "Transformation", "Collecte / Vente"];
+const TACHES_AVEC_TETES = ["Garde du troupeau", "Collecte / Vente"];
+
+function activityBlockHTML(idx, a) {
+  a = a || {};
+  const isAutre = a.type === "Autre";
+  const showLitres = TACHES_AVEC_LITRES.includes(a.type);
+  const showTetes = TACHES_AVEC_TETES.includes(a.type);
+  return `
+    <div class="activity-block" id="activity-${idx}" data-idx="${idx}">
+      <button type="button" class="remove-activity" onclick="removeActivityBlock(${idx})" title="Retirer cette activité">✕ retirer</button>
+      <div class="activity-title">Activité (tâche unique)</div>
+
+      <label>Date du pointage</label>
+      <input id="act-date-${idx}" type="date" value="${a.date || ""}">
+
+      <label>Tâche</label>
+      <select id="act-tache-${idx}" onchange="onTaskTypeChange(${idx})">
+        <option value="">—</option>
+        <option ${a.type==="Traite"?"selected":""}>Traite</option>
+        <option ${a.type==="Transformation"?"selected":""}>Transformation</option>
+        <option ${a.type==="Garde du troupeau"?"selected":""}>Garde du troupeau</option>
+        <option ${a.type==="Collecte / Vente"?"selected":""}>Collecte / Vente</option>
+        <option ${isAutre?"selected":""}>Autre</option>
+      </select>
+
+      <div class="precision-row${isAutre?" show":""}" id="precision-row-${idx}">
+        <label>Nom de la tâche (à préciser)</label>
+        <input id="act-precision-${idx}" type="text" placeholder="Ex : Réparation de l'enclos" value="${a.precision ? escapeHtml(a.precision) : ""}">
+      </div>
+      <div class="precision-row${isAutre?" show":""}" id="tarifperso-row-${idx}">
+        <label>Montant à payer par heure pour cette tâche (FCFA)</label>
+        <input id="act-tarifheure-${idx}" type="number" min="0" inputmode="numeric" placeholder="Ex : 60" value="${a.tarifHeurePerso || ""}">
+      </div>
+
+      <div class="precision-row${showLitres?" show":""}" id="litres-row-${idx}">
+        <label>Litres de lait</label>
+        <input id="act-litres-${idx}" type="number" min="0" step="0.1" inputmode="decimal" value="${a.litres || ""}">
+      </div>
+      <div class="precision-row${showTetes?" show":""}" id="tetes-row-${idx}">
+        <label>Têtes de bétail</label>
+        <input id="act-tetes-${idx}" type="number" min="0" inputmode="numeric" value="${a.tetes || ""}">
+      </div>
+
+      <h3 style="margin-top:14px;">Informations communes à toute tâche</h3>
+      <label>Distance parcourue (km)</label>
+      <input id="act-distance-${idx}" type="number" min="0" step="0.1" inputmode="decimal" value="${a.distance || ""}">
+      <div class="row2">
+        <div>
+          <label>Heures de travail / jour</label>
+          <input id="act-heures-${idx}" type="number" min="0" max="24" step="0.5" inputmode="decimal" value="${a.heures || ""}" onblur="clampField(this,0,24)">
+        </div>
+        <div>
+          <label>Jours travaillés (période)</label>
+          <input id="act-jours-${idx}" type="number" min="0" max="31" inputmode="numeric" value="${a.jours || ""}" onblur="clampField(this,0,31)">
+        </div>
+      </div>
+    </div>`;
+}
+
+function onTaskTypeChange(idx) {
+  const type = document.getElementById("act-tache-" + idx).value;
+  const isAutre = type === "Autre";
+  document.getElementById("precision-row-" + idx).classList.toggle("show", isAutre);
+  document.getElementById("tarifperso-row-" + idx).classList.toggle("show", isAutre);
+  document.getElementById("litres-row-" + idx).classList.toggle("show", TACHES_AVEC_LITRES.includes(type));
+  document.getElementById("tetes-row-" + idx).classList.toggle("show", TACHES_AVEC_TETES.includes(type));
+}
+
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+function addActivityBlock(a) {
+  const idx = activityCounter++;
+  const container = document.getElementById("activities-container");
+  const data = a || { date: todayISO(), jours: "1" };
+  container.insertAdjacentHTML("beforeend", activityBlockHTML(idx, data));
+}
+
+function removeActivityBlock(idx) {
+  const el = document.getElementById("activity-" + idx);
+  if (!el) return;
+  const container = document.getElementById("activities-container");
+  if (container.children.length <= 1) { showToast("Il faut garder au moins une activité."); return; }
+  el.remove();
+}
+
+function collectActivitiesFromForm() {
+  const blocks = document.querySelectorAll("#activities-container .activity-block");
+  const activites = [];
+  blocks.forEach(b => {
+    const idx = b.dataset.idx;
+    const date = document.getElementById("act-date-" + idx).value;
+    const type = document.getElementById("act-tache-" + idx).value;
+    const precision = document.getElementById("act-precision-" + idx).value.trim();
+    const tarifHeurePerso = document.getElementById("act-tarifheure-" + idx).value;
+    const litres = TACHES_AVEC_LITRES.includes(type) ? document.getElementById("act-litres-" + idx).value : "";
+    const tetes = TACHES_AVEC_TETES.includes(type) ? document.getElementById("act-tetes-" + idx).value : "";
+    const distance = document.getElementById("act-distance-" + idx).value;
+    const heures = document.getElementById("act-heures-" + idx).value;
+    const jours = document.getElementById("act-jours-" + idx).value;
+    if (type || litres || tetes || distance || heures) {
+      activites.push({ date, type, precision, tarifHeurePerso, litres, tetes, distance, heures, jours });
+    }
+  });
+  return activites;
+}
+
+function resetActivities(activites) {
+  document.getElementById("activities-container").innerHTML = "";
+  activityCounter = 0;
+  if (activites && activites.length) {
+    activites.forEach(a => addActivityBlock(a));
+  } else {
+    addActivityBlock();
+  }
+}
+
+function clearForm() {
+  ["nom","sexe","age","structure","periode"].forEach(id => document.getElementById("f-" + id).value = "");
+  resetActivities();
+  editingId = null;
+  document.getElementById("save-btn").textContent = "Créer le compte";
+}
+
+function saveEntry() {
+  const nom = document.getElementById("f-nom").value.trim();
+  if (!nom) { showToast("Merci d'indiquer un nom."); return; }
+
+  const previous = editingId ? state.entries.find(e => e.id === editingId) : null;
+  const wasClosed = !!previous && previous.statut === "cloture";
+
+  const entry = {
+    id: editingId || (Date.now() + "-" + Math.random().toString(36).slice(2, 7)),
+    nom,
+    sexe: document.getElementById("f-sexe").value,
+    age: document.getElementById("f-age").value,
+    structure: document.getElementById("f-structure").value.trim(),
+    periode: document.getElementById("f-periode").value.trim(),
+    activites: collectActivitiesFromForm(),
+    statut: wasClosed ? "ouvert" : (previous ? previous.statut : "ouvert"),
+    dateCloture: wasClosed ? "" : (previous ? previous.dateCloture : ""),
+  };
+
+  if (editingId) {
+    const idx = state.entries.findIndex(e => e.id === editingId);
+    if (idx > -1) state.entries[idx] = entry;
+    showToast(wasClosed ? "Compte rouvert après modification." : "Fiche modifiée.");
+  } else {
+    state.entries.push(entry);
+    showToast("Compte créé.");
+  }
+  saveState();
+  clearForm();
+  renderEntries();
+}
+
+function editEntry(id) {
+  const e = state.entries.find(e => e.id === id);
+  if (!e) return;
+  document.getElementById("f-nom").value = e.nom || "";
+  document.getElementById("f-sexe").value = e.sexe || "";
+  document.getElementById("f-age").value = e.age || "";
+  document.getElementById("f-structure").value = e.structure || "";
+  document.getElementById("f-periode").value = e.periode || "";
+  const activites = e.activites && e.activites.length ? e.activites : [{
+    type: e.tache || "", litres: e.litres, tetes: e.tetes, distance: e.distance, heures: e.heures, jours: e.jours,
+  }];
+  resetActivities(activites);
+  editingId = id;
+  document.getElementById("save-btn").textContent = "Mettre à jour le compte";
+  document.querySelector('.tab-btn[data-tab="saisie"]').click();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function pointerEntry(id) {
+  const e = state.entries.find(e => e.id === id);
+  if (!e) return;
+  editEntry(id);
+
+  const activites = e.activites || [];
+  const last = activites.length ? activites[activites.length - 1] : null;
+  addActivityBlock({
+    date: todayISO(),
+    jours: "1",
+    type: last ? last.type : "",
+    precision: last && last.type === "Autre" ? last.precision : "",
+    tarifHeurePerso: last && last.type === "Autre" ? last.tarifHeurePerso : "",
+  });
+  const newIdx = activityCounter - 1;
+
+  document.getElementById("save-btn").textContent = "Enregistrer le pointage";
+  setTimeout(() => {
+    const block = document.getElementById("activity-" + newIdx);
+    if (block) block.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 50);
+}
+
+function deleteEntry(id) {
+  if (!confirm("Supprimer cette fiche ?")) return;
+  state.entries = state.entries.filter(e => e.id !== id);
+  saveState();
+  renderEntries();
+  showToast("Fiche supprimée.");
+}
+
+function cloturerEntry(id) {
+  const e = state.entries.find(e => e.id === id);
+  if (!e) return;
+  if (!confirm("Clôturer ce compte ? Le bulletin de paye final sera généré avec le cumul actuel.")) return;
+  e.statut = "cloture";
+  e.dateCloture = todayISO();
+  saveState();
+  renderEntries();
+  showToast("Compte clôturé.");
+  printBulletin(id);
+}
+
+function renderEntries() {
+  const list = document.getElementById("entries-list");
+  document.getElementById("count-entries").textContent = state.entries.length;
+  if (state.entries.length === 0) {
+    list.innerHTML = '<div class="empty">Aucun compte enregistré pour l\'instant.</div>';
+    return;
+  }
+  const sorted = [...state.entries].sort((a, b) => {
+    const aOuvert = a.statut !== "cloture" ? 0 : 1;
+    const bOuvert = b.statut !== "cloture" ? 0 : 1;
+    return aOuvert - bOuvert;
+  });
+
+  list.innerHTML = sorted.map(e => {
+    const c = calcEntry(e, state.params);
+    const sexeLabel = e.sexe === "F" ? "Femme" : (e.sexe === "H" ? "Homme" : "—");
+    const activites = e.activites && e.activites.length ? e.activites : (e.tache ? [{ type: e.tache }] : []);
+    const tags = activites.map(a => {
+      const label = a.type === "Autre" && a.precision ? a.precision : (a.type || "");
+      return label ? `<span class="activity-tag">${escapeHtml(label)}</span>` : "";
+    }).join("");
+    const ouvert = e.statut !== "cloture";
+    const statutPill = ouvert
+      ? `<span class="pill pill-ouvert">Compte ouvert</span>`
+      : `<span class="pill pill-cloture">Compte clôturé${e.dateCloture ? " le " + escapeHtml(e.dateCloture) : ""}</span>`;
+    return `
+      <div class="entry">
+        <div class="entry-top">
+          <div>
+            <div class="entry-name">${escapeHtml(e.nom)}</div>
+            <div class="entry-sub">${sexeLabel}${e.age ? " · " + e.age + " ans" : ""}</div>
+            ${tags ? `<div class="activity-tags">${tags}</div>` : ""}
+          </div>
+          <div class="entry-actions">
+            ${ouvert ? `<button class="btn-edit" onclick="pointerEntry('${e.id}')">+ Pointer</button>` : ""}
+            <button class="btn-edit" onclick="editEntry('${e.id}')">Modifier</button>
+            ${ouvert ? `<button class="btn-edit" onclick="cloturerEntry('${e.id}')">Clôturer</button>` : ""}
+            <button class="btn-edit" onclick="printBulletin('${e.id}')">Imprimer</button>
+            <button class="btn-edit" onclick="downloadBulletinPDF('${e.id}')">Télécharger PDF</button>
+            <button class="btn-danger" onclick="deleteEntry('${e.id}')">Suppr.</button>
+          </div>
+        </div>
+        <div class="entry-total">${fmt(c.total)} FCFA</div>
+        ${statutPill}
+        ${c.tranche ? `<span class="pill">${c.tranche}</span>` : ""}
+        ${c.modalite ? `<div class="modalite">${c.modalite}</div>` : ""}
+      </div>`;
+  }).join("");
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+
+// ============================================================
+// PARAMETRES
+// ============================================================
+function fillParamsForm() {
+  document.getElementById("p-litre").value = state.params.litre;
+  document.getElementById("p-tete").value = state.params.tete;
+  document.getElementById("p-km").value = state.params.km;
+  document.getElementById("p-heure").value = state.params.heure;
+  document.getElementById("p-seuil1").value = state.params.seuil1;
+  document.getElementById("p-seuil2").value = state.params.seuil2;
+  document.getElementById("p-seuil3").value = state.params.seuil3;
+}
+
+function saveParams() {
+  state.params = {
+    litre: parseFloat(document.getElementById("p-litre").value) || 0,
+    tete: parseFloat(document.getElementById("p-tete").value) || 0,
+    km: parseFloat(document.getElementById("p-km").value) || 0,
+    heure: parseFloat(document.getElementById("p-heure").value) || 0,
+    seuil1: parseFloat(document.getElementById("p-seuil1").value) || 18,
+    seuil2: parseFloat(document.getElementById("p-seuil2").value) || 30,
+    seuil3: parseFloat(document.getElementById("p-seuil3").value) || 35,
+  };
+  saveState();
+  renderEntries();
+  showToast("Paramètres enregistrés.");
+}
+
+// ============================================================
+// SYNTHESE
+// ============================================================
+function renderSynthese() {
+  const calcs = state.entries.map(e => ({ e, c: calcEntry(e, state.params) }));
+
+  document.getElementById("s-total-personnes").textContent = state.entries.length;
+  const totalFcfa = calcs.reduce((s, x) => s + x.c.total, 0);
+  document.getElementById("s-total-fcfa").textContent = fmt(totalFcfa);
+
+  function sexeStats(code) {
+    const rows = calcs.filter(x => x.e.sexe === code);
+    const n = rows.length;
+    const t = rows.reduce((s, x) => s + x.c.total, 0);
+    return { n, t, m: n ? t / n : 0 };
+  }
+  const f = sexeStats("F"), h = sexeStats("H");
+  document.getElementById("sx-f-n").textContent = f.n;
+  document.getElementById("sx-f-t").textContent = fmt(f.t);
+  document.getElementById("sx-f-m").textContent = fmt(f.m);
+  document.getElementById("sx-h-n").textContent = h.n;
+  document.getElementById("sx-h-t").textContent = fmt(h.t);
+  document.getElementById("sx-h-m").textContent = fmt(h.m);
+
+  const p = state.params;
+  const tranches = [
+    "Moins de " + p.seuil1 + " ans",
+    p.seuil1 + " à " + p.seuil2 + " ans",
+    p.seuil2 + " à " + p.seuil3 + " ans",
+    "Plus de " + p.seuil3 + " ans",
+  ];
+  const table = document.getElementById("tranche-table");
+  table.innerHTML = "<tr><th>Tranche</th><th>Nombre</th><th>Total (FCFA)</th><th>Moyenne</th></tr>" +
+    tranches.map(tr => {
+      const rows = calcs.filter(x => x.c.tranche === tr);
+      const n = rows.length;
+      const t = rows.reduce((s, x) => s + x.c.total, 0);
+      const m = n ? t / n : 0;
+      return `<tr><td>${tr}</td><td>${n}</td><td>${fmt(t)}</td><td>${fmt(m)}</td></tr>`;
+    }).join("");
+}
+
+// ============================================================
+// EXPORT CSV
+// ============================================================
+function exportCSV() {
+  const headers = ["Nom","Sexe","Age","Structure","Periode","Tache","Precision_Autre","Litres","Tetes","Distance_km","Heures_jour","Jours","Rem_lait","Rem_tete","Rem_distance","Rem_heures","Sous_total_activite","Total_personne","Tranche_age","Modalite_gestion"];
+  const lines = [headers.join(";")];
+  state.entries.forEach(e => {
+    const c = calcEntry(e, state.params);
+    const activites = e.activites && e.activites.length ? e.activites : (e.tache ? [{ type: e.tache, litres: e.litres, tetes: e.tetes, distance: e.distance, heures: e.heures, jours: e.jours }] : [{}]);
+    activites.forEach(a => {
+      const ac = calcActivity(a, state.params);
+      const litresCsv = TACHES_AVEC_LITRES.includes(a.type) ? a.litres : "";
+      const tetesCsv = TACHES_AVEC_TETES.includes(a.type) ? a.tetes : "";
+      const row = [
+        e.nom, e.sexe, e.age, e.structure, e.periode,
+        a.type || "", a.precision || "",
+        litresCsv, tetesCsv, a.distance, a.heures, a.jours,
+        Math.round(ac.remLait), Math.round(ac.remTete), Math.round(ac.remDistance), Math.round(ac.remHeures),
+        Math.round(ac.total), Math.round(c.total), c.tranche, c.modalite,
+      ].map(v => `"${(v ?? "").toString().replace(/"/g,'""')}"`);
+      lines.push(row.join(";"));
+    });
+  });
+  const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "recompenses_femmes_jeunes.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("Fichier CSV téléchargé.");
+}
+
+// ============================================================
+// MONTANT EN LETTRES (français)
+// ============================================================
+function numberToFrenchWords(n) {
+  n = Math.round(n);
+  if (n === 0) return "zéro";
+  if (n < 0) return "moins " + numberToFrenchWords(-n);
+
+  const units = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf",
+    "dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"];
+  const tensWord = ["", "", "vingt", "trente", "quarante", "cinquante", "soixante", "", "quatre-vingt", ""];
+
+  function twoDigits(num) {
+    if (num < 20) return units[num];
+    const t = Math.floor(num / 10);
+    const u = num % 10;
+    if (t === 7 || t === 9) {
+      const baseTen = t - 1;
+      const rem = 10 + u;
+      if (u === 1 && t === 7) return "soixante et onze";
+      return tensWord[baseTen] + "-" + units[rem];
+    }
+    if (u === 0) {
+      if (t === 8) return "quatre-vingts";
+      return tensWord[t];
+    }
+    if (u === 1 && t !== 8) {
+      return tensWord[t] + " et un";
+    }
+    return tensWord[t] + "-" + units[u];
+  }
+
+  function threeDigits(num) {
+    const h = Math.floor(num / 100);
+    const rest = num % 100;
+    let str = "";
+    if (h > 0) {
+      str += (h === 1 ? "cent" : units[h] + " cent");
+      if (h > 1 && rest === 0) str += "s";
+    }
+    if (rest > 0) {
+      if (str) str += " ";
+      str += twoDigits(rest);
+    }
+    return str;
+  }
+
+  const groups = [];
+  let rem = n;
+  while (rem > 0) {
+    groups.push(rem % 1000);
+    rem = Math.floor(rem / 1000);
+  }
+  const scale = ["", "mille", "million", "milliard"];
+  let parts = [];
+  for (let i = groups.length - 1; i >= 0; i--) {
+    const g = groups[i];
+    if (g === 0) continue;
+    if (i === 1) {
+      parts.push(g === 1 ? "mille" : threeDigits(g) + " mille");
+    } else if (i >= 2) {
+      parts.push(threeDigits(g) + " " + scale[i] + (g > 1 ? "s" : ""));
+    } else {
+      parts.push(threeDigits(g));
+    }
+  }
+  return parts.join(" ");
+}
+
+// ============================================================
+// BULLETIN DE PAYE (impression / PDF)
+// ============================================================
+// Générateur PDF minimal, sans dépendance, un seul fichier A4 portrait.
+const UNICODE_TO_WINANSI = {
+  0x2013: 0x96, 0x2014: 0x97,             // tiret demi / tiret cadratin
+  0x2018: 0x91, 0x2019: 0x92,             // guillemets simples courbes
+  0x201C: 0x93, 0x201D: 0x94,             // guillemets doubles courbes
+  0x2026: 0x85,                            // points de suspension
+  0x00A0: 0x20,                            // espace insécable -> espace normal
+};
+function strToBytes(str) {
+  const arr = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) {
+    let code = str.charCodeAt(i);
+    if (code > 0xFF) code = UNICODE_TO_WINANSI[code] || 0x3F;
+    arr[i] = code & 0xFF;
+  }
+  return arr;
+}
+function escapePdfText(str) {
+  return str.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+// Largeurs de caractères Helvetica (en 1/1000 em), métriques standard AFM Adobe.
+const HELVETICA_WIDTHS = {
+  ' ':278,'!':278,'"':355,'#':556,'$':556,'%':889,'&':667,"'":191,'(':333,')':333,'*':389,'+':584,',':278,'-':333,'.':278,'/':278,
+  '0':556,'1':556,'2':556,'3':556,'4':556,'5':556,'6':556,'7':556,'8':556,'9':556,
+  ':':278,';':278,'<':584,'=':584,'>':584,'?':556,'@':1015,
+  'A':667,'B':667,'C':722,'D':722,'E':667,'F':611,'G':778,'H':722,'I':278,'J':500,'K':667,'L':556,'M':833,'N':722,'O':778,'P':667,'Q':778,'R':722,'S':667,'T':611,'U':722,'V':667,'W':944,'X':667,'Y':667,'Z':611,
+  '[':278,'\\':278,']':278,'^':469,'_':556,'`':333,
+  'a':556,'b':556,'c':500,'d':556,'e':556,'f':278,'g':556,'h':556,'i':222,'j':222,'k':500,'l':222,'m':833,'n':556,'o':556,'p':556,'q':556,'r':333,'s':500,'t':278,'u':556,'v':500,'w':722,'x':500,'y':500,'z':500,
+  '{':334,'|':260,'}':334,'~':584,
+  '×':584,'é':556,'è':556,'ê':556,'à':556,'ù':556,'ô':556,'î':222,'ç':500,'â':556,'û':556,'ë':556,'ï':222,'ü':556,'ö':556,
+};
+const HELVETICA_BOLD_WIDTHS = {
+  ' ':278,'!':333,'"':474,'#':556,'$':556,'%':889,'&':722,"'":238,'(':333,')':333,'*':389,'+':584,',':278,'-':333,'.':278,'/':278,
+  '0':556,'1':556,'2':556,'3':556,'4':556,'5':556,'6':556,'7':556,'8':556,'9':556,
+  ':':333,';':333,'<':584,'=':584,'>':584,'?':611,'@':975,
+  'A':722,'B':722,'C':722,'D':722,'E':667,'F':611,'G':778,'H':722,'I':278,'J':556,'K':722,'L':611,'M':833,'N':722,'O':778,'P':667,'Q':778,'R':722,'S':667,'T':611,'U':722,'V':667,'W':944,'X':667,'Y':667,'Z':611,
+  '[':333,'\\':278,']':333,'^':584,'_':556,'`':333,
+  'a':556,'b':611,'c':556,'d':611,'e':556,'f':333,'g':611,'h':611,'i':278,'j':278,'k':556,'l':278,'m':889,'n':611,'o':611,'p':611,'q':611,'r':389,'s':556,'t':333,'u':611,'v':556,'w':778,'x':556,'y':556,'z':500,
+  '{':389,'|':280,'}':389,'~':584,
+  '×':584,'é':556,'è':556,'ê':556,'à':556,'ù':556,'ô':611,'î':278,'ç':556,'â':556,'û':611,'ë':556,'ï':278,'ü':611,'ö':611,
+};
+function measureText(str, size, bold) {
+  const table = bold ? HELVETICA_BOLD_WIDTHS : HELVETICA_WIDTHS;
+  let units = 0;
+  for (const ch of str) units += table[ch] !== undefined ? table[ch] : 556;
+  return units * size / 1000;
+}
+
+function createPdfDoc() {
+  const PAGE_W = 595, PAGE_H = 842;
+  let ops = [];
+  let y = PAGE_H - 50;
+  const marginX = 50;
+
+  function text(str, opts) {
+    opts = opts || {};
+    const size = opts.size || 10;
+    const isBold = !!opts.bold;
+    const bold = isBold ? "F2" : (opts.italic ? "F3" : "F1");
+    const x = opts.x !== undefined ? opts.x : marginX;
+    const align = opts.align || "left";
+    let drawX = x;
+    if (align === "right" && opts.width) {
+      const textW = measureText(str, size, isBold);
+      drawX = x + opts.width - textW;
+    } else if (align === "center" && opts.width) {
+      const textW = measureText(str, size, isBold);
+      drawX = x + (opts.width - textW) / 2;
+    }
+    const gray = opts.gray !== undefined ? `${opts.gray} g ` : "";
+    const resetGray = opts.gray !== undefined ? " 0 g" : "";
+    ops.push(`${gray}BT /${bold} ${size} Tf ${drawX.toFixed(2)} ${y.toFixed(2)} Td (${escapePdfText(str)}) Tj ET${resetGray}`);
+    if (!opts.noAdvance) y -= opts.lineHeight || (size + 6);
+  }
+
+  function space(n) { y -= n; }
+
+  function hr(widthPt) {
+    const w = widthPt || (PAGE_W - 2 * marginX);
+    ops.push(`0.8 w ${marginX} ${y.toFixed(2)} m ${(marginX + w).toFixed(2)} ${y.toFixed(2)} l S`);
+    y -= 10;
+  }
+
+  function line(x1, y1, x2, y2, width) {
+    ops.push(`${width || 0.6} w ${x1} ${y1} m ${x2} ${y2} l S`);
+  }
+
+  function rect(x, ry, w, h) {
+    ops.push(`0.6 w ${x} ${ry} ${w} ${h} re S`);
+  }
+
+  function getY() { return y; }
+  function setY(v) { y = v; }
+
+  function build() {
+    const content = ops.join("\n");
+    const objects = [];
+    objects.push(`1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`);
+    objects.push(`2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n`);
+    objects.push(`3 0 obj\n<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R /F3 7 0 R >> >> /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Contents 4 0 R >>\nendobj\n`);
+    const streamBytes = strToBytes(content);
+    objects.push(`4 0 obj\n<< /Length ${streamBytes.length} >>\nstream\n${content}\nendstream\nendobj\n`);
+    objects.push(`5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n`);
+    objects.push(`6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj\n`);
+    objects.push(`7 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>\nendobj\n`);
+
+    let pdf = "%PDF-1.4\n";
+    const offsets = [0];
+    for (const obj of objects) {
+      offsets.push(strToBytes(pdf).length);
+      pdf += obj;
+    }
+    const xrefStart = strToBytes(pdf).length;
+    let xref = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+    for (let i = 1; i <= objects.length; i++) {
+      xref += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
+    }
+    pdf += xref;
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+
+    return strToBytes(pdf);
+  }
+
+  return { text, space, hr, line, rect, getY, setY, build, PAGE_W, PAGE_H, marginX };
+}
+
+
+
+
+function fmtPdf(n) {
+  n = Math.round(n);
+  const s = Math.abs(n).toString();
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 === 0) out += " ";
+    out += s[i];
+  }
+  return (n < 0 ? "-" : "") + out;
+}
+
+function buildBulletinPDFBytes(entryData) {
+  const doc = createPdfDoc();
+  const fullW = doc.PAGE_W - 2 * doc.marginX;
+
+  doc.text("RÉPUBLIQUE DU BÉNIN", { size: 11, align: "center", width: fullW });
+  doc.text("Programme d'Appui aux Initiatives dans le secteur de l'Élevage (PAIE)", { size: 9, align: "center", width: fullW });
+  doc.space(8);
+  doc.text("BULLETIN DE PAYE D'ACTIVITÉ RÉALISÉE", { size: 15, bold: true, align: "center", width: fullW });
+  doc.text(entryData.periode || "Période non précisée", { size: 10, align: "center", width: fullW });
+  doc.space(8);
+  doc.hr();
+  doc.space(4);
+
+  doc.text("Nom et prénom : " + entryData.nom, { size: 11 });
+  doc.text("Sexe : " + entryData.sexeLabel, { size: 11 });
+  doc.text("Âge : " + (entryData.age || "—") + " ans", { size: 11 });
+  doc.text("Structure / Ménage : " + (entryData.structure || "—"), { size: 11 });
+  doc.space(6);
+  doc.hr();
+  doc.space(6);
+
+  const c1x = doc.marginX, c1w = 195;
+  const c2x = c1x + c1w, c2w = 85;
+  const c3x = c2x + c2w, c3w = 100;
+  const c4x = c3x + c3w, c4w = 115;
+
+  function tableRow(a, b, c, d, opts) {
+    opts = opts || {};
+    const size = opts.size || 9;
+    const bold = !!opts.bold;
+    const yBefore = doc.getY();
+    doc.text(a, { x: c1x, size, bold, noAdvance: true });
+    doc.text(b, { x: c2x, width: c2w, align: "right", size, bold, noAdvance: true });
+    doc.text(c, { x: c3x, width: c3w, align: "right", size, bold, noAdvance: true });
+    doc.text(d, { x: c4x, width: c4w, align: "right", size, bold, noAdvance: true });
+    doc.setY(yBefore - (opts.lineHeight || 16));
+  }
+
+  tableRow("Activité réalisée", "Quantité", "Tarif unitaire", "Montant", { bold: true, size: 9 });
+  doc.hr();
+
+  let total = 0;
+  entryData.rows.forEach(r => {
+    tableRow(r.label, r.qte, r.tarif, fmtPdf(r.montantVal) + " FCFA");
+    total += r.montantVal;
+  });
+  doc.space(2);
+  doc.hr();
+  tableRow("TOTAL À VERSER", "", "", fmtPdf(total) + " FCFA", { bold: true, size: 11, lineHeight: 22 });
+  doc.space(10);
+
+  const boxY1 = doc.getY();
+  doc.text("Montant en chiffres : " + fmtPdf(total) + " FCFA", { size: 11, bold: true });
+  doc.text("Montant en lettres : " + entryData.montantLettres, { size: 10 });
+  const boxY2 = doc.getY() - 4;
+  doc.rect(doc.marginX - 6, boxY2, fullW + 12, boxY1 - boxY2 + 20);
+  doc.space(14);
+
+  if (entryData.modalite) {
+    doc.text("Modalité de gestion recommandée : " + entryData.modalite, { size: 9 });
+    doc.space(6);
+  }
+
+  doc.text("Fait le " + entryData.dateStr, { x: doc.marginX, width: fullW, align: "right", size: 10 });
+  doc.space(40);
+
+  const sigY = doc.getY();
+  doc.line(doc.marginX, sigY, doc.marginX + 180, sigY);
+  doc.line(doc.marginX + fullW - 180, sigY, doc.marginX + fullW, sigY);
+  doc.setY(sigY - 14);
+  doc.text("Signature du bénéficiaire", { x: doc.marginX, width: 180, align: "center", size: 9, noAdvance: true });
+  doc.text("Signature du responsable", { x: doc.marginX + fullW - 180, width: 180, align: "center", size: 9 });
+
+  doc.setY(32);
+  doc.text(
+    "Proposition du Programme d'Appui aux Initiatives dans le secteur de l'Élevage (PAIE), mise au point par le",
+    { x: doc.marginX, width: fullW, align: "center", size: 7.5, italic: true, gray: 0.55, noAdvance: true }
+  );
+  doc.setY(22);
+  doc.text(
+    "Laboratoire d'Analyse et de Recherche sur les Dynamiques Économiques et Sociales (LARDES)",
+    { x: doc.marginX, width: fullW, align: "center", size: 7.5, italic: true, gray: 0.55 }
+  );
+
+  return doc.build();
+}
+
+function downloadBulletinPDF(id) {
+  const e = state.entries.find(x => x.id === id);
+  if (!e) return;
+  const c = calcEntry(e, state.params);
+  const p = state.params;
+  const sexeLabel = e.sexe === "F" ? "Femme" : (e.sexe === "H" ? "Homme" : "—");
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+  const montantLettres = numberToFrenchWords(c.total) + " francs CFA";
+  const activites = e.activites && e.activites.length ? e.activites : (e.tache ? [{ type: e.tache, litres: e.litres, tetes: e.tetes, distance: e.distance, heures: e.heures, jours: e.jours }] : []);
+
+  const groups = aggregateActivites(activites, p);
+  const rows = [];
+  groups.forEach(g => {
+    const label = g.type === "Autre" && g.precision ? "Autre : " + g.precision : (g.type || "Activité");
+    if (g.litres && g.remLait) rows.push({ label: label + " — Lait collecté", qte: fmtQty(g.litres) + " L", tarif: fmtPdf(p.litre) + " FCFA", montantVal: g.remLait });
+    if (g.tetes && g.remTete) rows.push({ label: label + " — Bétail gardé", qte: fmtQty(g.tetes) + " tête(s)", tarif: fmtPdf(p.tete) + " FCFA", montantVal: g.remTete });
+    if (g.distance && g.remDistance) rows.push({ label: label + " — Déplacement", qte: fmtQty(g.distance) + " km", tarif: fmtPdf(p.km) + " FCFA", montantVal: g.remDistance });
+    if (g.heuresTotal && g.remHeures) {
+      const tarifEff = g.remHeures / g.heuresTotal;
+      rows.push({ label: label + " — Temps de travail", qte: fmtQty(g.heuresTotal) + " h (" + fmtQty(g.joursCount) + " j pointés)", tarif: fmtPdf(tarifEff) + " FCFA", montantVal: g.remHeures });
+    }
+  });
+
+  const bytes = buildBulletinPDFBytes({
+    nom: e.nom, sexeLabel, age: e.age, structure: e.structure,
+    periode: formatPeriode(e.periode), rows, montantLettres,
+    modalite: c.modalite, dateStr: today,
+  });
+
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  const safeName = e.nom.replace(/[^a-zA-Z0-9]+/g, "_");
+  link.download = "bulletin_" + safeName + ".pdf";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showToast("Bulletin PDF téléchargé.");
+}
+
+function printBulletin(id) {
+  const e = state.entries.find(x => x.id === id);
+  if (!e) return;
+  const c = calcEntry(e, state.params);
+  const p = state.params;
+  const sexeLabel = e.sexe === "F" ? "Femme" : (e.sexe === "H" ? "Homme" : "—");
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+  const montantLettres = numberToFrenchWords(c.total) + " francs CFA";
+  const activites = e.activites && e.activites.length ? e.activites : (e.tache ? [{ type: e.tache, litres: e.litres, tetes: e.tetes, distance: e.distance, heures: e.heures, jours: e.jours }] : []);
+
+  function ligne(designation, qte, tarif, montant) {
+    if (!qte || montant === 0) return "";
+    return `<tr><td>${designation}</td><td>${qte}</td><td>${fmt(tarif)} FCFA</td><td>${fmt(montant)} FCFA</td></tr>`;
+  }
+
+  const groups = aggregateActivites(activites, p);
+  const activitesRows = groups.map(g => {
+    const label = g.type === "Autre" && g.precision ? "Autre : " + escapeHtml(g.precision) : escapeHtml(g.type || "Activité");
+    const tarifEff = g.heuresTotal ? g.remHeures / g.heuresTotal : 0;
+    return [
+      ligne(label + " — Lait collecté", g.litres ? fmtQty(g.litres) + " L" : "", p.litre, g.remLait),
+      ligne(label + " — Bétail gardé", g.tetes ? fmtQty(g.tetes) + " tête(s)" : "", p.tete, g.remTete),
+      ligne(label + " — Déplacement", g.distance ? fmtQty(g.distance) + " km" : "", p.km, g.remDistance),
+      ligne(label + " — Temps de travail", g.heuresTotal ? fmtQty(g.heuresTotal) + " h (" + fmtQty(g.joursCount) + " j pointés)" : "", tarifEff, g.remHeures),
+    ].join("");
+  }).join("");
+
+  const html = `
+    <div class="b-header">
+      <div class="b-rep">RÉPUBLIQUE DU BÉNIN</div>
+      <div class="b-prog">Programme d'Appui aux Initiatives dans le secteur de l'Élevage (PAIE)</div>
+      <h1>Bulletin de paye d'activité réalisée</h1>
+      <div class="b-sub">${e.periode ? escapeHtml(formatPeriode(e.periode)) : "Période non précisée"}</div>
+    </div>
+    <hr>
+    <table class="b-infos">
+      <tr><td class="b-label">Nom et prénom</td><td class="b-value">${escapeHtml(e.nom)}</td></tr>
+      <tr><td class="b-label">Sexe</td><td class="b-value">${sexeLabel}</td></tr>
+      <tr><td class="b-label">Âge</td><td class="b-value">${e.age || "—"} ${e.age ? "ans" : ""}</td></tr>
+      <tr><td class="b-label">Structure / Ménage</td><td class="b-value">${escapeHtml(e.structure || "—")}</td></tr>
+    </table>
+
+    <table class="b-table">
+      <tr><th>Activité réalisée</th><th>Quantité</th><th>Tarif unitaire</th><th>Montant</th></tr>
+      ${activitesRows}
+      <tr class="b-total"><td colspan="3">TOTAL À VERSER</td><td>${fmt(c.total)} FCFA</td></tr>
+    </table>
+
+    <div class="b-montant-box">
+      <div class="b-row">Montant en chiffres : <b>${fmt(c.total)} FCFA</b></div>
+      <div class="b-row b-lettres">Montant en lettres : <b>${montantLettres}</b></div>
+    </div>
+
+    ${c.modalite ? `<div class="b-modalite">Modalité de gestion recommandée (${escapeHtml(c.tranche)}) : ${escapeHtml(c.modalite)}</div>` : ""}
+
+    <div class="b-date">Fait le ${today}</div>
+
+    <div class="b-signatures">
+      <div><div class="b-line">Signature du bénéficiaire</div></div>
+      <div><div class="b-line">Signature du responsable</div></div>
+    </div>
+
+    <div class="b-footer">Proposition du Programme d'Appui aux Initiatives dans le secteur de l'Élevage (PAIE), mise au point par le<br>Laboratoire d'Analyse et de Recherche sur les Dynamiques Économiques et Sociales (LARDES)</div>
+  `;
+
+  document.getElementById("bulletin-content").innerHTML = html;
+  window.print();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+fillParamsForm();
+resetActivities();
+renderEntries();
+renderSynthese();
+
+// Active la mise en cache hors ligne si l'app est ouverte via http(s) (ex : hébergée en ligne
+// ou via un serveur local). Sans effet si le fichier est ouvert directement (file://) — l'app
+// fonctionne quand même hors ligne dans ce cas, car aucune donnée ne transite par le réseau.
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+</script>
+
+</body>
+</html>

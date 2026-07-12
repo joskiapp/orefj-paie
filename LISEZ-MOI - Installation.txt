@@ -1,0 +1,75 @@
+OReFJ-PAIE — Outil de récompense Femmes et Jeunes
+====================================================
+
+Ce dossier contient l'application complète. Elle fonctionne entièrement
+hors connexion : aucune donnée n'est envoyée sur internet, tout reste
+enregistré sur le téléphone.
+
+IMPORTANT : il n'existe pas de fichier ".exe" ou ".apk" à double-cliquer
+pour cette application — ce n'est pas ce format-là. C'est une application
+web installable : on l'ouvre une fois dans le navigateur du téléphone,
+puis on l'épingle sur l'écran d'accueil avec une icône "OReFJ-PAIE",
+exactement comme une vraie application. Ensuite, elle s'ouvre en plein
+écran, sans barre d'adresse, et fonctionne hors ligne.
+
+
+COMMENT TRANSFÉRER LE DOSSIER SUR UN TÉLÉPHONE
+-----------------------------------------------
+Copiez tout le dossier "OReFJ-PAIE" (avec tous ses fichiers, ne pas en
+oublier un seul) sur le téléphone, par exemple :
+  - via un câble USB (copier le dossier dans le stockage du téléphone),
+  - via Bluetooth,
+  - via une clé USB + adaptateur,
+  - via WhatsApp/Drive en envoyant le dossier compressé en .zip
+    (puis en le décompressant sur le téléphone avec une appli
+    "Gestionnaire de fichiers").
+
+Gardez tous les fichiers ensemble dans le même dossier (le fichier
+principal 3Outil_Recompense_App.html a besoin des autres fichiers du
+dossier — icônes, manifest.json — pour que l'icône et le mode plein
+écran fonctionnent).
+
+
+INSTALLATION SUR ANDROID
+-------------------------
+1. Ouvrir l'application "Fichiers" (ou "Mes fichiers") du téléphone.
+2. Aller dans le dossier OReFJ-PAIE.
+3. Appuyer sur le fichier "3Outil_Recompense_App.html" → il s'ouvre
+   dans Chrome.
+4. Appuyer sur les 3 points (⋮) en haut à droite de Chrome.
+5. Choisir "Ajouter à l'écran d'accueil" (ou "Installer l'application").
+6. Confirmer. Une icône "OReFJ-PAIE" apparaît sur l'écran d'accueil.
+7. Ouvrir l'application à partir de cette icône (pas besoin de repasser
+   par le gestionnaire de fichiers ensuite).
+
+
+INSTALLATION SUR IPHONE
+-------------------------
+1. Ouvrir l'application "Fichiers" de l'iPhone.
+2. Aller dans le dossier OReFJ-PAIE.
+3. Appuyer sur "3Outil_Recompense_App.html".
+4. Si le fichier ne s'ouvre pas directement dans Safari, appuyer sur
+   l'icône de partage puis choisir "Ouvrir dans Safari" (ou "Copier
+   dans Safari").
+5. Dans Safari, appuyer sur l'icône de partage (le carré avec la
+   flèche vers le haut) en bas de l'écran.
+6. Choisir "Sur l'écran d'accueil".
+7. Confirmer. Une icône "OReFJ-PAIE" apparaît sur l'écran d'accueil.
+
+
+APRÈS L'INSTALLATION
+-----------------------
+- Les données saisies (personnes, pointages, paramètres) restent sur
+  CE téléphone uniquement, même après fermeture de l'application.
+- Si vous désinstallez l'icône ou effacez les données du navigateur,
+  les données enregistrées seront perdues — pensez à utiliser
+  régulièrement "Exporter en CSV" (onglet Synthèse) pour garder une
+  copie de sauvegarde.
+- Chaque téléphone doit recevoir sa propre copie du dossier et
+  l'installer séparément (les données ne se synchronisent pas entre
+  téléphones).
+
+
+Proposition du Programme d'Appui aux Initiatives dans le secteur de
+l'Élevage (PAIE), mise au point par le Laboratoire d'Analyse et de
+Recherche sur les Dynamiques Économiques et Sociales (LARDES).
