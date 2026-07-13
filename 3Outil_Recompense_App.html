@@ -464,6 +464,8 @@ function nouvelleActivite(id, nom, unite, typeVente, tarifDepart) {
 function activitesParDefaut() {
   return [
     nouvelleActivite("garde_moutons", "Garde des moutons", "jour", false, 500),
+    nouvelleActivite("garde_boeufs_vaches", "Garde des bœufs & vaches", "jour", false, 500),
+    nouvelleActivite("garde_veaux", "Garde des veaux", "jour", false, 500),
     nouvelleActivite("collecte_lait", "Collecte de lait", "litre", false, 50),
     nouvelleActivite("traite", "Traite (production de lait)", "litre", false, 50),
     nouvelleActivite("vente_lait", "Vente de lait", "litre", true, 50),
@@ -472,6 +474,17 @@ function activitesParDefaut() {
     nouvelleActivite("vente_betail", "Vente de bétail", "tete", true, 500),
     nouvelleActivite("autres_produits", "Autres produits", "unite", true, 0),
   ];
+}
+
+// Ajoute au catalogue existant les activités introduites après la première mise en service
+// (ex : ajoutées à une date ultérieure), sans toucher aux tarifs déjà personnalisés des
+// activités existantes. S'exécute à chaque chargement, sans effet si déjà présentes.
+function ajouterActivitesManquantes() {
+  if (!state.activites) return;
+  const existants = new Set(state.activites.map(a => a.id));
+  activitesParDefaut().forEach(def => {
+    if (!existants.has(def.id)) state.activites.push(def);
+  });
 }
 
 const DEFAULT_PARAMS = {
@@ -555,6 +568,9 @@ function showToastSiPossible(msg) {
 
 migrerVersActivitesMultiples();
 if (!state.activites) state.activites = activitesParDefaut();
+const nbActivitesAvant = state.activites.length;
+ajouterActivitesManquantes();
+if (state.activites.length !== nbActivitesAvant) saveState();
 
 let editingId = null;
 

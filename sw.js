@@ -1,7 +1,7 @@
 // Service worker : ne sert que si l'app est un jour hébergée en http(s) — pas de rôle
 // pour l'usage local (fichier ouvert directement), qui fonctionne déjà 100% hors ligne
 // puisque toutes les données restent dans le localStorage du téléphone.
-const CACHE_NAME = "orefj-paie-v1";
+const CACHE_NAME = "orefj-paie-v2";
 const CORE_FILES = [
   "./3Outil_Recompense_App.html",
   "./manifest.json",
