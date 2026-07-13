@@ -192,6 +192,7 @@
   <button class="tab-btn active" data-tab="saisie">Saisie</button>
   <button class="tab-btn" data-tab="parametres">Paramètres</button>
   <button class="tab-btn" data-tab="synthese">Synthèse</button>
+  <button class="tab-btn" data-tab="rapports">Rapports</button>
   <button class="tab-btn" data-tab="aide">Aide</button>
 </nav>
 
@@ -243,50 +244,75 @@
   <!-- ===================== PARAMETRES ===================== -->
   <div class="tab" id="tab-parametres">
     <div class="card">
-      <h2>Tarifs de référence</h2>
-      <div class="param-row">
-        <div class="param-label">Tarif par litre de lait
-          <span class="param-note">FCFA par litre collecté ou transformé</span>
-        </div>
-        <input class="param-input" id="p-litre" type="number" min="0">
+      <h2>🔒 Accès administrateur</h2>
+      <p class="param-note" id="admin-status-note">—</p>
+      <div id="admin-lock-box">
+        <label for="p-admin-code-saisi">Code d'accès</label>
+        <input id="p-admin-code-saisi" type="password" inputmode="numeric" placeholder="Code administrateur">
+        <button class="btn btn-primary" onclick="deverrouillerParametres()">Déverrouiller</button>
       </div>
-      <div class="param-row">
-        <div class="param-label">Tarif par tête de bétail
-          <span class="param-note">FCFA par tête gardée / mois</span>
-        </div>
-        <input class="param-input" id="p-tete" type="number" min="0">
+      <div id="admin-unlock-box" style="display:none;">
+        <label for="p-admin-code-nouveau">Changer le code administrateur</label>
+        <input id="p-admin-code-nouveau" type="text" inputmode="numeric" placeholder="Laisser vide pour ne pas changer">
+        <button class="btn btn-secondary" style="width:100%;margin-top:10px;" onclick="verrouillerParametres()">🔒 Reverrouiller les paramètres</button>
       </div>
-      <div class="param-row">
-        <div class="param-label">Tarif par kilomètre
-          <span class="param-note">FCFA par km parcouru</span>
+    </div>
+
+    <div class="card" id="card-activites">
+      <h2>Activités et tarifs</h2>
+      <p class="param-note">Chaque activité a son propre tarif, différent selon le sexe et la tranche d'âge de la personne (8 cases). Ouvrez une activité pour voir/modifier sa grille.</p>
+      <div id="activites-liste"></div>
+      <button type="button" class="btn btn-secondary" style="width:100%; margin-top:10px;" onclick="ouvrirAjoutActivite()" id="btn-ajouter-activite">+ Ajouter une activité</button>
+      <div id="ajout-activite-form" style="display:none; margin-top:10px;">
+        <label for="new-act-nom">Nom de l'activité</label>
+        <input id="new-act-nom" type="text" placeholder="Ex : Vente d'œufs">
+        <label for="new-act-unite">Unité de calcul</label>
+        <select id="new-act-unite">
+          <option value="jour">Jour</option>
+          <option value="litre">Litre</option>
+          <option value="kg">Kilogramme</option>
+          <option value="tete">Tête</option>
+          <option value="unite">Unité</option>
+        </select>
+        <label style="display:flex; align-items:center; gap:8px; margin-top:12px;">
+          <input type="checkbox" id="new-act-vente" style="width:auto;">
+          <span style="font-weight:600; color:var(--text);">Activité de vente (suivi de recette séparé)</span>
+        </label>
+        <div class="actions-row">
+          <button class="btn btn-primary" onclick="ajouterActivite()">Ajouter</button>
+          <button class="btn btn-secondary" onclick="annulerAjoutActivite()">Annuler</button>
         </div>
-        <input class="param-input" id="p-km" type="number" min="0">
-      </div>
-      <div class="param-row">
-        <div class="param-label">Tarif horaire
-          <span class="param-note">FCFA par heure de travail</span>
-        </div>
-        <input class="param-input" id="p-heure" type="number" min="0">
       </div>
     </div>
 
     <div class="card">
-      <h2>Seuils d'âge (gestion du compte)</h2>
+      <h2>Bonus journalier</h2>
+      <div class="param-row">
+        <div class="param-label">Plafond du bonus par jour et par personne
+          <span class="param-note">FCFA maximum, toutes activités confondues ce jour-là, même si plusieurs objectifs sont dépassés</span>
+        </div>
+        <input class="param-input" id="p-bonus-plafond" type="number" min="0">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Seuils d'âge</h2>
+      <p class="param-note">Utilisés à la fois pour la modalité de gestion du compte et pour les tranches de tarifs ci-dessus.</p>
       <div class="param-row">
         <div class="param-label">Seuil 1
-          <span class="param-note">En dessous : compte géré par un adulte responsable</span>
+          <span class="param-note">En dessous : "Moins de 18 ans" ; compte géré par un adulte responsable</span>
         </div>
         <input class="param-input" id="p-seuil1" type="number" min="0">
       </div>
       <div class="param-row">
         <div class="param-label">Seuil 2
-          <span class="param-note">Jusqu'à cet âge : carnet gardé par la famille</span>
+          <span class="param-note">Jusqu'à cet âge : "18 à 30 ans" ; carnet gardé par la famille</span>
         </div>
         <input class="param-input" id="p-seuil2" type="number" min="0">
       </div>
       <div class="param-row">
         <div class="param-label">Seuil 3
-          <span class="param-note">Jusqu'à cet âge : gestion autonome confirmée</span>
+          <span class="param-note">Jusqu'à cet âge : "30 à 35 ans" ; gestion autonome confirmée</span>
         </div>
         <input class="param-input" id="p-seuil3" type="number" min="0">
       </div>
@@ -327,6 +353,57 @@
     </div>
   </div>
 
+  <!-- ===================== RAPPORTS ===================== -->
+  <div class="tab" id="tab-rapports">
+    <div class="card">
+      <h2>Filtres</h2>
+      <label for="r-employe">Employé</label>
+      <select id="r-employe"><option value="">Tous</option></select>
+
+      <label for="r-activite">Activité</label>
+      <select id="r-activite"><option value="">Toutes</option></select>
+
+      <div class="row2">
+        <div>
+          <label for="r-sexe">Sexe</label>
+          <select id="r-sexe">
+            <option value="">Tous</option>
+            <option value="F">Femme</option>
+            <option value="H">Homme</option>
+          </select>
+        </div>
+        <div>
+          <label for="r-tranche">Tranche d'âge</label>
+          <select id="r-tranche">
+            <option value="">Toutes</option>
+            <option value="moins18">Moins de 18 ans</option>
+            <option value="de18a30">18 à 30 ans</option>
+            <option value="de30a35">30 à 35 ans</option>
+            <option value="plus35">Plus de 35 ans</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div>
+          <label for="r-date-debut">Période — du</label>
+          <input id="r-date-debut" type="date">
+        </div>
+        <div>
+          <label for="r-date-fin">au</label>
+          <input id="r-date-fin" type="date">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="genererRapport()">Générer le rapport</button>
+    </div>
+
+    <div class="card">
+      <h2>Résultat</h2>
+      <div id="rapport-resultat"><div class="empty">Choisissez des filtres puis cliquez sur "Générer le rapport".</div></div>
+    </div>
+  </div>
+
   <!-- ===================== AIDE ===================== -->
   <div class="tab" id="tab-aide">
     <div class="card">
@@ -361,9 +438,46 @@
 // ============================================================
 const STORAGE_KEY = "outil_recompense_v1";
 
+// ---------- ACTIVITÉS : catalogue extensible, tarifs par sexe et tranche d'âge ----------
+const TRANCHES_AGE = ["moins18", "de18a30", "de30a35", "plus35"];
+const TRANCHE_LABELS = {
+  moins18: "Moins de 18 ans", de18a30: "18 à 30 ans", de30a35: "30 à 35 ans", plus35: "Plus de 35 ans",
+};
+const UNITES = {
+  jour: "jour(s)", litre: "litre(s)", kg: "kilogramme(s)", tete: "tête(s)", unite: "unité(s)",
+};
+
+function tarifsUniformes(valeur) {
+  const t = { H: {}, F: {} };
+  TRANCHES_AGE.forEach(tr => { t.H[tr] = valeur; t.F[tr] = valeur; });
+  return t;
+}
+
+function nouvelleActivite(id, nom, unite, typeVente, tarifDepart) {
+  return {
+    id, nom, unite, typeVente: !!typeVente,
+    tarifs: tarifsUniformes(tarifDepart || 0),
+    objectif: null, bonusSeuil: null, bonusMontant: null,
+  };
+}
+
+function activitesParDefaut() {
+  return [
+    nouvelleActivite("garde_moutons", "Garde des moutons", "jour", false, 500),
+    nouvelleActivite("collecte_lait", "Collecte de lait", "litre", false, 50),
+    nouvelleActivite("traite", "Traite (production de lait)", "litre", false, 50),
+    nouvelleActivite("vente_lait", "Vente de lait", "litre", true, 50),
+    nouvelleActivite("transformation_fromage", "Transformation en fromage", "kg", false, 200),
+    nouvelleActivite("vente_fromage", "Vente de fromage", "kg", true, 200),
+    nouvelleActivite("vente_betail", "Vente de bétail", "tete", true, 500),
+    nouvelleActivite("autres_produits", "Autres produits", "unite", true, 0),
+  ];
+}
+
 const DEFAULT_PARAMS = {
-  litre: 50, tete: 500, km: 100, heure: 50,
   seuil1: 18, seuil2: 30, seuil3: 35,
+  bonusPlafondJour: 200,
+  adminCode: "", // vide = pas encore configuré, aucune protection tant que l'administrateur n'en définit pas un
 };
 
 function loadState() {
@@ -371,7 +485,7 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) {}
-  return { params: { ...DEFAULT_PARAMS }, entries: [] };
+  return { params: { ...DEFAULT_PARAMS }, activites: activitesParDefaut(), entries: [] };
 }
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -379,6 +493,8 @@ function saveState() {
 
 let state = loadState();
 if (!state.params) state.params = { ...DEFAULT_PARAMS };
+if (state.params.bonusPlafondJour === undefined) state.params.bonusPlafondJour = 200;
+if (state.params.adminCode === undefined) state.params.adminCode = "";
 if (!state.entries) state.entries = [];
 
 // Migration : les fiches créées avant l'introduction des comptes ouverts/clôturés
@@ -388,6 +504,57 @@ state.entries.forEach(e => {
   if (!e.statut) { e.statut = "ouvert"; migrated = true; }
 });
 if (migrated) saveState();
+
+// Migration : ancien modèle (litres/têtes/distance/heures/jours par activité, tarifs globaux)
+// -> nouveau modèle (une activité choisie dans un catalogue, une quantité, un tarif qui dépend
+// du sexe et de la tranche d'âge de la personne). Le catalogue est créé une seule fois ; les
+// anciens pointages sont réattribués du mieux possible à une activité du nouveau catalogue,
+// et une activité "Autres produits (migré)" récupère ce qui ne peut pas être réattribué
+// automatiquement (ancien "Autre" personnalisé, ou "Collecte / Vente" ambigu).
+const MIGRATION_TYPE_VERS_ACTIVITE = {
+  "Traite": "traite",
+  "Transformation": "transformation_fromage",
+  "Garde du troupeau": "garde_moutons",
+  "Collecte / Vente": "collecte_lait",
+};
+
+function migrerVersActivitesMultiples() {
+  if (state.activites && state.activites.length) return;
+  state.activites = activitesParDefaut();
+
+  state.entries.forEach(e => {
+    if (!e.activites) return;
+    e.activites = e.activites.map(a => {
+      if (a.activiteId) return a; // déjà migrée
+      let activiteId = MIGRATION_TYPE_VERS_ACTIVITE[a.type] || "autres_produits";
+      // Ancienne "Garde du troupeau" était payée par tête ; la nouvelle "Garde des moutons"
+      // est payée par jour — on reprend le nombre de jours renseigné (le plus proche du
+      // nouveau sens), pas l'ancien nombre de têtes.
+      let quantite;
+      if (a.type === "Garde du troupeau") {
+        quantite = parseFloat(a.jours) || 0;
+      } else if (a.type === "Autre") {
+        quantite = (parseFloat(a.heures) || 0) * (parseFloat(a.jours) || 0);
+      } else {
+        quantite = parseFloat(a.litres) || parseFloat(a.tetes) || 0;
+      }
+      return {
+        date: a.date || "", activiteId, quantite,
+        prixUnitaire: "", ancienType: a.type, ancienneNote: a.precision || "",
+      };
+    });
+  });
+  saveState();
+  showToastSiPossible("Données mises à jour vers le nouveau système d'activités. Vérifiez les quantités migrées.");
+}
+
+function showToastSiPossible(msg) {
+  // La fonction showToast n'existe pas encore à ce stade du script ; on diffère l'appel.
+  window.__toastEnAttente = msg;
+}
+
+migrerVersActivitesMultiples();
+if (!state.activites) state.activites = activitesParDefaut();
 
 let editingId = null;
 
@@ -401,6 +568,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.classList.add("active");
     document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
     if (btn.dataset.tab === "synthese") renderSynthese();
+    if (btn.dataset.tab === "rapports") remplirFiltresRapport();
   });
 });
 
@@ -414,31 +582,77 @@ function showToast(msg) {
 // ============================================================
 // CALCULS
 // ============================================================
-function calcActivity(a, params) {
-  const litres = TACHES_AVEC_LITRES.includes(a.type) ? (parseFloat(a.litres) || 0) : 0;
-  const tetes = TACHES_AVEC_TETES.includes(a.type) ? (parseFloat(a.tetes) || 0) : 0;
-  const distance = parseFloat(a.distance) || 0;
-  const heures = parseFloat(a.heures) || 0;
-  const jours = parseFloat(a.jours) || 0;
-  const tarifHeureEffectif = (a.type === "Autre" && a.tarifHeurePerso !== undefined && a.tarifHeurePerso !== "")
-    ? (parseFloat(a.tarifHeurePerso) || 0)
-    : params.heure;
+// Tranche d'âge utilisée pour les tarifs (mêmes seuils que pour la modalité de gestion du compte).
+function trancheAgeDe(age, params) {
+  if (isNaN(age)) return null;
+  if (age < params.seuil1) return "moins18";
+  if (age <= params.seuil2) return "de18a30";
+  if (age <= params.seuil3) return "de30a35";
+  return "plus35";
+}
 
-  const remLait = litres * params.litre;
-  const remTete = tetes * params.tete;
-  const remDistance = distance * params.km;
-  const remHeures = heures * jours * tarifHeureEffectif;
-  return { remLait, remTete, remDistance, remHeures, tarifHeureEffectif, total: remLait + remTete + remDistance + remHeures };
+function trouverActivite(activiteId) {
+  return (state.activites || []).find(x => x.id === activiteId);
+}
+
+function tarifPour(activiteId, sexe, tranche) {
+  const def = trouverActivite(activiteId);
+  if (!def || !sexe || !tranche) return 0;
+  const parSexe = def.tarifs[sexe] || def.tarifs.H || {};
+  return parSexe[tranche] || 0;
+}
+
+// Calcule la rémunération d'un pointage pour la personne concernée (le tarif dépend de
+// l'activité, du sexe et de la tranche d'âge). Si l'activité est une vente, la recette
+// (prix unitaire × quantité) est calculée à part : elle n'entre PAS dans ce que touche
+// le travailleur, c'est une donnée d'exploitation suivie séparément (onglet Rapports).
+function calcActivity(a, personne, params) {
+  const quantite = parseFloat(a.quantite) || 0;
+  const def = trouverActivite(a.activiteId);
+  const tranche = trancheAgeDe(parseFloat(personne.age), params);
+  const tarif = tarifPour(a.activiteId, personne.sexe, tranche);
+  const remuneration = quantite * tarif;
+  const prixUnitaire = parseFloat(a.prixUnitaire) || 0;
+  const recette = (def && def.typeVente) ? quantite * prixUnitaire : 0;
+  return { quantite, tarif, remuneration, recette, tranche, unite: def ? def.unite : "" };
+}
+
+// Bonus journalier : pour chaque jour pointé, chaque activité ayant un objectif/seuil défini
+// déclenche son bonus si la quantité du jour l'atteint. La somme des bonus déclenchés ce
+// jour-là est plafonnée (paramètre bonusPlafondJour, 200 FCFA par défaut) avant d'être ajoutée
+// au total de la personne. Le plafond s'applique à la journée entière, toutes activités
+// confondues — pas activité par activité.
+function calculerBonus(activites, params) {
+  const parJour = {};
+  activites.forEach(a => {
+    const date = a.date || "";
+    if (!date || !a.activiteId) return;
+    parJour[date] = parJour[date] || {};
+    parJour[date][a.activiteId] = (parJour[date][a.activiteId] || 0) + (parseFloat(a.quantite) || 0);
+  });
+  let bonusTotal = 0;
+  Object.keys(parJour).forEach(date => {
+    let bonusJour = 0;
+    Object.keys(parJour[date]).forEach(activiteId => {
+      const def = trouverActivite(activiteId);
+      if (!def || !def.bonusSeuil || !def.bonusMontant) return;
+      if (parJour[date][activiteId] >= def.bonusSeuil) bonusJour += def.bonusMontant;
+    });
+    bonusTotal += Math.min(bonusJour, params.bonusPlafondJour || 200);
+  });
+  return bonusTotal;
 }
 
 function calcEntry(e, params) {
-  const activites = e.activites && e.activites.length ? e.activites : [e]; // compat anciennes fiches
-  let remLait = 0, remTete = 0, remDistance = 0, remHeures = 0;
+  const activites = e.activites && e.activites.length ? e.activites : [];
+  let remuneration = 0, recette = 0;
   activites.forEach(a => {
-    const c = calcActivity(a, params);
-    remLait += c.remLait; remTete += c.remTete; remDistance += c.remDistance; remHeures += c.remHeures;
+    const c = calcActivity(a, e, params);
+    remuneration += c.remuneration;
+    recette += c.recette;
   });
-  const total = remLait + remTete + remDistance + remHeures;
+  const bonus = calculerBonus(activites, params);
+  const total = remuneration + bonus;
 
   let tranche = "";
   let modalite = "";
@@ -458,39 +672,34 @@ function calcEntry(e, params) {
       modalite = "Gestion autonome (adulte)";
     }
   }
-  return { remLait, remTete, remDistance, remHeures, total, tranche, modalite };
+  return { remuneration, recette, bonus, total, tranche, modalite };
 }
 
-// Regroupe les activités (ex: plusieurs pointages quotidiens de "Traite") par type de tâche,
+// Regroupe les activités (ex: plusieurs pointages quotidiens de "Traite") par activité,
 // pour que le bulletin affiche un cumul par activité plutôt qu'une ligne par jour pointé
 // (le générateur PDF ne gère pas la pagination : sans agrégation, un mois de pointages
 // quotidiens ferait déborder la page).
-function aggregateActivites(activites, params) {
+function aggregateActivites(activites, personne, params) {
   const groups = {};
   const order = [];
   activites.forEach(a => {
-    const key = a.type === "Autre" ? "Autre:" + (a.precision || "") : (a.type || "");
+    const key = a.activiteId || "inconnue";
     if (!groups[key]) {
+      const def = trouverActivite(a.activiteId);
       groups[key] = {
-        type: a.type, precision: a.precision,
-        litres: 0, tetes: 0, distance: 0, heuresTotal: 0, joursCount: 0,
-        remLait: 0, remTete: 0, remDistance: 0, remHeures: 0,
+        activiteId: a.activiteId,
+        nom: def ? def.nom : (a.ancienType || "Activité (ancienne, non reconnue)"),
+        unite: def ? def.unite : "unite", typeVente: def ? def.typeVente : false,
+        quantite: 0, remuneration: 0, recette: 0, joursCount: 0,
       };
       order.push(key);
     }
     const g = groups[key];
-    const ac = calcActivity(a, params);
-    const heures = parseFloat(a.heures) || 0;
-    const jours = parseFloat(a.jours) || 0;
-    g.litres += parseFloat(a.litres) || 0;
-    g.tetes += parseFloat(a.tetes) || 0;
-    g.distance += parseFloat(a.distance) || 0;
-    g.heuresTotal += heures * jours;
-    g.joursCount += jours;
-    g.remLait += ac.remLait;
-    g.remTete += ac.remTete;
-    g.remDistance += ac.remDistance;
-    g.remHeures += ac.remHeures;
+    const c = calcActivity(a, personne, params);
+    g.quantite += c.quantite;
+    g.remuneration += c.remuneration;
+    g.recette += c.recette;
+    if (a.date) g.joursCount += 1;
   });
   return order.map(key => groups[key]);
 }
@@ -528,14 +737,14 @@ function clampField(el, min, max) {
 // ============================================================
 let activityCounter = 0;
 
-const TACHES_AVEC_LITRES = ["Traite", "Transformation", "Collecte / Vente"];
-const TACHES_AVEC_TETES = ["Garde du troupeau", "Collecte / Vente"];
-
 function activityBlockHTML(idx, a) {
   a = a || {};
-  const isAutre = a.type === "Autre";
-  const showLitres = TACHES_AVEC_LITRES.includes(a.type);
-  const showTetes = TACHES_AVEC_TETES.includes(a.type);
+  const def = trouverActivite(a.activiteId);
+  const isVente = def ? def.typeVente : false;
+  const uniteLabel = def ? UNITES[def.unite] : "unité(s)";
+  const optionsHtml = (state.activites || []).map(act =>
+    `<option value="${act.id}" ${a.activiteId === act.id ? "selected" : ""}>${escapeHtml(act.nom)}</option>`
+  ).join("");
   return `
     <div class="activity-block" id="activity-${idx}" data-idx="${idx}">
       <button type="button" class="remove-activity" onclick="removeActivityBlock(${idx})" title="Retirer cette activité">✕ retirer</button>
@@ -544,57 +753,29 @@ function activityBlockHTML(idx, a) {
       <label>Date du pointage</label>
       <input id="act-date-${idx}" type="date" value="${a.date || ""}">
 
-      <label>Tâche</label>
-      <select id="act-tache-${idx}" onchange="onTaskTypeChange(${idx})">
+      <label>Activité</label>
+      <select id="act-activite-${idx}" onchange="onActiviteChange(${idx})">
         <option value="">—</option>
-        <option ${a.type==="Traite"?"selected":""}>Traite</option>
-        <option ${a.type==="Transformation"?"selected":""}>Transformation</option>
-        <option ${a.type==="Garde du troupeau"?"selected":""}>Garde du troupeau</option>
-        <option ${a.type==="Collecte / Vente"?"selected":""}>Collecte / Vente</option>
-        <option ${isAutre?"selected":""}>Autre</option>
+        ${optionsHtml}
       </select>
 
-      <div class="precision-row${isAutre?" show":""}" id="precision-row-${idx}">
-        <label>Nom de la tâche (à préciser)</label>
-        <input id="act-precision-${idx}" type="text" placeholder="Ex : Réparation de l'enclos" value="${a.precision ? escapeHtml(a.precision) : ""}">
-      </div>
-      <div class="precision-row${isAutre?" show":""}" id="tarifperso-row-${idx}">
-        <label>Montant à payer par heure pour cette tâche (FCFA)</label>
-        <input id="act-tarifheure-${idx}" type="number" min="0" inputmode="numeric" placeholder="Ex : 60" value="${a.tarifHeurePerso || ""}">
-      </div>
+      <label id="act-quantite-label-${idx}">Quantité (${uniteLabel})</label>
+      <input id="act-quantite-${idx}" type="number" min="0" step="0.1" inputmode="decimal" value="${a.quantite || ""}">
 
-      <div class="precision-row${showLitres?" show":""}" id="litres-row-${idx}">
-        <label>Litres de lait</label>
-        <input id="act-litres-${idx}" type="number" min="0" step="0.1" inputmode="decimal" value="${a.litres || ""}">
-      </div>
-      <div class="precision-row${showTetes?" show":""}" id="tetes-row-${idx}">
-        <label>Têtes de bétail</label>
-        <input id="act-tetes-${idx}" type="number" min="0" inputmode="numeric" value="${a.tetes || ""}">
-      </div>
-
-      <h3 style="margin-top:14px;">Informations communes à toute tâche</h3>
-      <label>Distance parcourue (km)</label>
-      <input id="act-distance-${idx}" type="number" min="0" step="0.1" inputmode="decimal" value="${a.distance || ""}">
-      <div class="row2">
-        <div>
-          <label>Heures de travail / jour</label>
-          <input id="act-heures-${idx}" type="number" min="0" max="24" step="0.5" inputmode="decimal" value="${a.heures || ""}" onblur="clampField(this,0,24)">
-        </div>
-        <div>
-          <label>Jours travaillés (période)</label>
-          <input id="act-jours-${idx}" type="number" min="0" max="31" inputmode="numeric" value="${a.jours || ""}" onblur="clampField(this,0,31)">
-        </div>
+      <div class="precision-row${isVente ? " show" : ""}" id="prixunitaire-row-${idx}">
+        <label>Prix unitaire de vente (FCFA)</label>
+        <input id="act-prixunitaire-${idx}" type="number" min="0" inputmode="numeric" value="${a.prixUnitaire || ""}">
+        <span class="param-note">Sert au suivi de la recette de la ferme — n'affecte pas la rémunération du travailleur, calculée séparément selon le tarif de l'activité.</span>
       </div>
     </div>`;
 }
 
-function onTaskTypeChange(idx) {
-  const type = document.getElementById("act-tache-" + idx).value;
-  const isAutre = type === "Autre";
-  document.getElementById("precision-row-" + idx).classList.toggle("show", isAutre);
-  document.getElementById("tarifperso-row-" + idx).classList.toggle("show", isAutre);
-  document.getElementById("litres-row-" + idx).classList.toggle("show", TACHES_AVEC_LITRES.includes(type));
-  document.getElementById("tetes-row-" + idx).classList.toggle("show", TACHES_AVEC_TETES.includes(type));
+function onActiviteChange(idx) {
+  const activiteId = document.getElementById("act-activite-" + idx).value;
+  const def = trouverActivite(activiteId);
+  const uniteLabel = def ? UNITES[def.unite] : "unité(s)";
+  document.getElementById("act-quantite-label-" + idx).textContent = "Quantité (" + uniteLabel + ")";
+  document.getElementById("prixunitaire-row-" + idx).classList.toggle("show", !!(def && def.typeVente));
 }
 
 function todayISO() {
@@ -605,7 +786,7 @@ function todayISO() {
 function addActivityBlock(a) {
   const idx = activityCounter++;
   const container = document.getElementById("activities-container");
-  const data = a || { date: todayISO(), jours: "1" };
+  const data = a || { date: todayISO() };
   container.insertAdjacentHTML("beforeend", activityBlockHTML(idx, data));
 }
 
@@ -623,16 +804,12 @@ function collectActivitiesFromForm() {
   blocks.forEach(b => {
     const idx = b.dataset.idx;
     const date = document.getElementById("act-date-" + idx).value;
-    const type = document.getElementById("act-tache-" + idx).value;
-    const precision = document.getElementById("act-precision-" + idx).value.trim();
-    const tarifHeurePerso = document.getElementById("act-tarifheure-" + idx).value;
-    const litres = TACHES_AVEC_LITRES.includes(type) ? document.getElementById("act-litres-" + idx).value : "";
-    const tetes = TACHES_AVEC_TETES.includes(type) ? document.getElementById("act-tetes-" + idx).value : "";
-    const distance = document.getElementById("act-distance-" + idx).value;
-    const heures = document.getElementById("act-heures-" + idx).value;
-    const jours = document.getElementById("act-jours-" + idx).value;
-    if (type || litres || tetes || distance || heures) {
-      activites.push({ date, type, precision, tarifHeurePerso, litres, tetes, distance, heures, jours });
+    const activiteId = document.getElementById("act-activite-" + idx).value;
+    const quantite = document.getElementById("act-quantite-" + idx).value;
+    const def = trouverActivite(activiteId);
+    const prixUnitaire = (def && def.typeVente) ? document.getElementById("act-prixunitaire-" + idx).value : "";
+    if (activiteId || quantite) {
+      activites.push({ date, activiteId, quantite, prixUnitaire });
     }
   });
   return activites;
@@ -695,9 +872,7 @@ function editEntry(id) {
   document.getElementById("f-age").value = e.age || "";
   document.getElementById("f-structure").value = e.structure || "";
   document.getElementById("f-periode").value = e.periode || "";
-  const activites = e.activites && e.activites.length ? e.activites : [{
-    type: e.tache || "", litres: e.litres, tetes: e.tetes, distance: e.distance, heures: e.heures, jours: e.jours,
-  }];
+  const activites = e.activites && e.activites.length ? e.activites : [{}];
   resetActivities(activites);
   editingId = id;
   document.getElementById("save-btn").textContent = "Mettre à jour le compte";
@@ -714,10 +889,7 @@ function pointerEntry(id) {
   const last = activites.length ? activites[activites.length - 1] : null;
   addActivityBlock({
     date: todayISO(),
-    jours: "1",
-    type: last ? last.type : "",
-    precision: last && last.type === "Autre" ? last.precision : "",
-    tarifHeurePerso: last && last.type === "Autre" ? last.tarifHeurePerso : "",
+    activiteId: last ? last.activiteId : "",
   });
   const newIdx = activityCounter - 1;
 
@@ -764,11 +936,12 @@ function renderEntries() {
   list.innerHTML = sorted.map(e => {
     const c = calcEntry(e, state.params);
     const sexeLabel = e.sexe === "F" ? "Femme" : (e.sexe === "H" ? "Homme" : "—");
-    const activites = e.activites && e.activites.length ? e.activites : (e.tache ? [{ type: e.tache }] : []);
-    const tags = activites.map(a => {
-      const label = a.type === "Autre" && a.precision ? a.precision : (a.type || "");
-      return label ? `<span class="activity-tag">${escapeHtml(label)}</span>` : "";
-    }).join("");
+    const activites = e.activites || [];
+    const nomsActivites = [...new Set(activites.map(a => {
+      const def = trouverActivite(a.activiteId);
+      return def ? def.nom : (a.ancienType || "");
+    }).filter(Boolean))];
+    const tags = nomsActivites.map(nom => `<span class="activity-tag">${escapeHtml(nom)}</span>`).join("");
     const ouvert = e.statut !== "cloture";
     const statutPill = ouvert
       ? `<span class="pill pill-ouvert">Compte ouvert</span>`
@@ -790,7 +963,8 @@ function renderEntries() {
             <button class="btn-danger" onclick="deleteEntry('${e.id}')">Suppr.</button>
           </div>
         </div>
-        <div class="entry-total">${fmt(c.total)} FCFA</div>
+        <div class="entry-total">${fmt(c.total)} FCFA${c.bonus ? ` <span style="font-size:11px;font-weight:600;color:var(--muted);">(dont ${fmt(c.bonus)} FCFA de bonus)</span>` : ""}</div>
+        ${c.recette ? `<div class="modalite">Recette des ventes (hors rémunération) : ${fmt(c.recette)} FCFA</div>` : ""}
         ${statutPill}
         ${c.tranche ? `<span class="pill">${c.tranche}</span>` : ""}
         ${c.modalite ? `<div class="modalite">${c.modalite}</div>` : ""}
@@ -805,29 +979,167 @@ function escapeHtml(s) {
 // ============================================================
 // PARAMETRES
 // ============================================================
+// Déverrouillage valable pour la session en cours seulement (revient verrouillé après
+// rechargement de la page). Code stocké en clair dans les données locales du téléphone —
+// suffisant pour dissuader une modification accidentelle hors-ligne, pas une vraie sécurité.
+let adminDeverrouille = false;
+
+function peutModifierParametres() {
+  return !state.params.adminCode || adminDeverrouille;
+}
+
+function deverrouillerParametres() {
+  const saisi = document.getElementById("p-admin-code-saisi").value;
+  if (saisi && saisi === state.params.adminCode) {
+    adminDeverrouille = true;
+    document.getElementById("p-admin-code-saisi").value = "";
+    showToast("Paramètres déverrouillés pour cette session.");
+    fillParamsForm();
+  } else {
+    showToast("Code incorrect.");
+  }
+}
+
+function verrouillerParametres() {
+  adminDeverrouille = false;
+  fillParamsForm();
+  showToast("Paramètres reverrouillés.");
+}
+
 function fillParamsForm() {
-  document.getElementById("p-litre").value = state.params.litre;
-  document.getElementById("p-tete").value = state.params.tete;
-  document.getElementById("p-km").value = state.params.km;
-  document.getElementById("p-heure").value = state.params.heure;
   document.getElementById("p-seuil1").value = state.params.seuil1;
   document.getElementById("p-seuil2").value = state.params.seuil2;
   document.getElementById("p-seuil3").value = state.params.seuil3;
+  document.getElementById("p-bonus-plafond").value = state.params.bonusPlafondJour;
+
+  const ok = peutModifierParametres();
+  document.getElementById("admin-lock-box").style.display = ok ? "none" : "block";
+  document.getElementById("admin-unlock-box").style.display = ok ? "block" : "none";
+  const note = document.getElementById("admin-status-note");
+  if (!state.params.adminCode) {
+    note.textContent = "Aucun code défini pour l'instant : les paramètres sont librement modifiables. Définissez un code ci-dessous (dans la zone déverrouillée) pour les protéger à l'avenir.";
+  } else if (adminDeverrouille) {
+    note.textContent = "🔓 Paramètres déverrouillés pour cette session.";
+  } else {
+    note.textContent = "🔒 Paramètres verrouillés — saisissez le code administrateur pour les modifier.";
+  }
+  ["p-seuil1", "p-seuil2", "p-seuil3", "p-bonus-plafond"].forEach(id => {
+    document.getElementById(id).disabled = !ok;
+  });
+  document.getElementById("btn-ajouter-activite").style.display = ok ? "block" : "none";
+  if (!ok) annulerAjoutActivite();
+
+  renderActivitesListe();
+}
+
+function renderActivitesListe() {
+  const container = document.getElementById("activites-liste");
+  const ok = peutModifierParametres();
+  container.innerHTML = (state.activites || []).map((act, i) => {
+    const grille = ["H", "F"].map(sexe => {
+      const cells = TRANCHES_AGE.map(tr => `
+          <div>
+            <label style="margin:6px 0 2px; font-size:10.5px;">${TRANCHE_LABELS[tr]}</label>
+            <input class="param-input" style="width:100%; text-align:left;" type="number" min="0"
+              id="tarif-${i}-${sexe}-${tr}" value="${act.tarifs[sexe][tr]}" ${ok ? "" : "disabled"}>
+          </div>`).join("");
+      return `
+        <div style="margin-bottom:8px;">
+          <b style="font-size:12px; color:var(--blue);">${sexe === "H" ? "Homme" : "Femme"}</b>
+          <div class="row2" style="grid-template-columns:1fr 1fr; gap:6px;">${cells}</div>
+        </div>`;
+    }).join("");
+    return `
+      <div class="activity-block" style="background:#fff;">
+        <div class="activity-title">${escapeHtml(act.nom)}
+          <span class="param-note">(${UNITES[act.unite]}${act.typeVente ? " · vente" : ""})</span>
+        </div>
+        <label>Nom de l'activité</label>
+        <input id="act-nom-${i}" type="text" value="${escapeHtml(act.nom)}" ${ok ? "" : "disabled"}>
+        ${grille}
+        <div class="row2">
+          <div>
+            <label>Objectif / seuil de bonus (${UNITES[act.unite]})</label>
+            <input class="param-input" style="width:100%; text-align:left;" type="number" min="0"
+              id="act-bonusseuil-${i}" value="${act.bonusSeuil || ""}" ${ok ? "" : "disabled"}>
+          </div>
+          <div>
+            <label>Montant du bonus (FCFA)</label>
+            <input class="param-input" style="width:100%; text-align:left;" type="number" min="0"
+              id="act-bonusmontant-${i}" value="${act.bonusMontant || ""}" ${ok ? "" : "disabled"}>
+          </div>
+        </div>
+        ${ok ? `<button class="btn-danger" style="margin-top:8px;" onclick="supprimerActivite(${i})">🗑️ Retirer cette activité</button>` : ""}
+      </div>`;
+  }).join("");
+}
+
+function ouvrirAjoutActivite() {
+  if (!peutModifierParametres()) { showToast("Déverrouillez les paramètres avec le code administrateur d'abord."); return; }
+  document.getElementById("ajout-activite-form").style.display = "block";
+}
+
+function annulerAjoutActivite() {
+  document.getElementById("ajout-activite-form").style.display = "none";
+  document.getElementById("new-act-nom").value = "";
+  document.getElementById("new-act-vente").checked = false;
+}
+
+function ajouterActivite() {
+  const nom = document.getElementById("new-act-nom").value.trim();
+  if (!nom) { showToast("Merci d'indiquer un nom d'activité."); return; }
+  const unite = document.getElementById("new-act-unite").value;
+  const typeVente = document.getElementById("new-act-vente").checked;
+  const id = "custom_" + nom.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") + "_" + Date.now().toString(36);
+  state.activites.push(nouvelleActivite(id, nom, unite, typeVente, 0));
+  saveState();
+  annulerAjoutActivite();
+  fillParamsForm();
+  showToast("Activité ajoutée. Pensez à renseigner ses tarifs.");
+}
+
+function supprimerActivite(i) {
+  if (!confirm("Retirer cette activité du catalogue ? Les pointages déjà enregistrés avec cette activité gardent leur valeur, mais elle n'apparaîtra plus dans les listes de saisie.")) return;
+  state.activites.splice(i, 1);
+  saveState();
+  fillParamsForm();
 }
 
 function saveParams() {
-  state.params = {
-    litre: parseFloat(document.getElementById("p-litre").value) || 0,
-    tete: parseFloat(document.getElementById("p-tete").value) || 0,
-    km: parseFloat(document.getElementById("p-km").value) || 0,
-    heure: parseFloat(document.getElementById("p-heure").value) || 0,
-    seuil1: parseFloat(document.getElementById("p-seuil1").value) || 18,
-    seuil2: parseFloat(document.getElementById("p-seuil2").value) || 30,
-    seuil3: parseFloat(document.getElementById("p-seuil3").value) || 35,
-  };
+  if (!peutModifierParametres()) { showToast("Déverrouillez les paramètres avec le code administrateur d'abord."); return; }
+
+  state.params.seuil1 = parseFloat(document.getElementById("p-seuil1").value) || 18;
+  state.params.seuil2 = parseFloat(document.getElementById("p-seuil2").value) || 30;
+  state.params.seuil3 = parseFloat(document.getElementById("p-seuil3").value) || 35;
+  state.params.bonusPlafondJour = parseFloat(document.getElementById("p-bonus-plafond").value) || 0;
+
+  const nouveauCodeEl = document.getElementById("p-admin-code-nouveau");
+  let codeChange = false;
+  if (nouveauCodeEl && nouveauCodeEl.value.trim()) {
+    state.params.adminCode = nouveauCodeEl.value.trim();
+    nouveauCodeEl.value = "";
+    codeChange = true;
+  }
+
+  (state.activites || []).forEach((act, i) => {
+    const nomInput = document.getElementById("act-nom-" + i);
+    if (nomInput && nomInput.value.trim()) act.nom = nomInput.value.trim();
+    ["H", "F"].forEach(sexe => {
+      TRANCHES_AGE.forEach(tr => {
+        const el = document.getElementById(`tarif-${i}-${sexe}-${tr}`);
+        if (el) act.tarifs[sexe][tr] = parseFloat(el.value) || 0;
+      });
+    });
+    const seuilEl = document.getElementById("act-bonusseuil-" + i);
+    const montantEl = document.getElementById("act-bonusmontant-" + i);
+    act.bonusSeuil = seuilEl && seuilEl.value ? parseFloat(seuilEl.value) : null;
+    act.bonusMontant = montantEl && montantEl.value ? parseFloat(montantEl.value) : null;
+  });
+
   saveState();
   renderEntries();
-  showToast("Paramètres enregistrés.");
+  fillParamsForm();
+  showToast(codeChange ? "Paramètres enregistrés. Code administrateur mis à jour." : "Paramètres enregistrés.");
 }
 
 // ============================================================
@@ -873,24 +1185,111 @@ function renderSynthese() {
 }
 
 // ============================================================
+// RAPPORTS
+// ============================================================
+function remplirFiltresRapport() {
+  const selEmp = document.getElementById("r-employe");
+  const empActuel = selEmp.value;
+  selEmp.innerHTML = '<option value="">Tous</option>' +
+    state.entries.map(e => `<option value="${e.id}">${escapeHtml(e.nom)}</option>`).join("");
+  selEmp.value = empActuel;
+
+  const selAct = document.getElementById("r-activite");
+  const actActuelle = selAct.value;
+  selAct.innerHTML = '<option value="">Toutes</option>' +
+    (state.activites || []).map(a => `<option value="${a.id}">${escapeHtml(a.nom)}</option>`).join("");
+  selAct.value = actActuelle;
+}
+
+function genererRapport() {
+  const fEmploye = document.getElementById("r-employe").value;
+  const fActivite = document.getElementById("r-activite").value;
+  const fSexe = document.getElementById("r-sexe").value;
+  const fTranche = document.getElementById("r-tranche").value;
+  const fDebut = document.getElementById("r-date-debut").value;
+  const fFin = document.getElementById("r-date-fin").value;
+  const p = state.params;
+
+  const lignes = [];
+  state.entries.forEach(e => {
+    if (fEmploye && e.id !== fEmploye) return;
+    if (fSexe && e.sexe !== fSexe) return;
+    const tranche = trancheAgeDe(parseFloat(e.age), p);
+    if (fTranche && tranche !== fTranche) return;
+    (e.activites || []).forEach(a => {
+      if (!a.activiteId) return;
+      if (fActivite && a.activiteId !== fActivite) return;
+      if (fDebut && (!a.date || a.date < fDebut)) return;
+      if (fFin && (!a.date || a.date > fFin)) return;
+      lignes.push({ entry: e, a, c: calcActivity(a, e, p) });
+    });
+  });
+
+  const container = document.getElementById("rapport-resultat");
+  if (!lignes.length) {
+    container.innerHTML = '<div class="empty">Aucun pointage ne correspond à ces filtres.</div>';
+    return;
+  }
+
+  const parActivite = {};
+  lignes.forEach(({ a, c }) => {
+    const def = trouverActivite(a.activiteId);
+    const key = a.activiteId;
+    if (!parActivite[key]) {
+      parActivite[key] = { nom: def ? def.nom : "Activité inconnue", unite: def ? UNITES[def.unite] : "", quantite: 0, remuneration: 0, recette: 0 };
+    }
+    parActivite[key].quantite += c.quantite;
+    parActivite[key].remuneration += c.remuneration;
+    parActivite[key].recette += c.recette;
+  });
+
+  const parEmploye = {};
+  lignes.forEach(({ entry, c }) => {
+    if (!parEmploye[entry.id]) parEmploye[entry.id] = { nom: entry.nom, remuneration: 0, recette: 0 };
+    parEmploye[entry.id].remuneration += c.remuneration;
+    parEmploye[entry.id].recette += c.recette;
+  });
+
+  const totalRemuneration = lignes.reduce((s, l) => s + l.c.remuneration, 0);
+  const totalRecette = lignes.reduce((s, l) => s + l.c.recette, 0);
+
+  container.innerHTML = `
+    <div class="synth-grid">
+      <div class="synth-box"><div class="num">${fmt(totalRemuneration)}</div><div class="lbl">Rémunérations (FCFA)</div></div>
+      <div class="synth-box"><div class="num">${fmt(totalRecette)}</div><div class="lbl">Recettes de vente (FCFA)</div></div>
+    </div>
+    <p class="param-note">Le bonus journalier n'est pas inclus dans ce tableau (il se calcule par journée complète et par personne, toutes activités confondues) — voir le total de chaque compte dans l'onglet Saisie.</p>
+    <h3>Par activité</h3>
+    <table>
+      <tr><th>Activité</th><th>Quantité</th><th>Rémunération</th><th>Recette</th></tr>
+      ${Object.values(parActivite).map(g => `<tr><td>${escapeHtml(g.nom)}</td><td>${fmtQty(g.quantite)} ${g.unite}</td><td>${fmt(g.remuneration)} FCFA</td><td>${g.recette ? fmt(g.recette) + " FCFA" : "—"}</td></tr>`).join("")}
+    </table>
+    <h3 style="margin-top:16px;">Par employé</h3>
+    <table>
+      <tr><th>Employé</th><th>Rémunération</th><th>Recette</th></tr>
+      ${Object.values(parEmploye).map(g => `<tr><td>${escapeHtml(g.nom)}</td><td>${fmt(g.remuneration)} FCFA</td><td>${g.recette ? fmt(g.recette) + " FCFA" : "—"}</td></tr>`).join("")}
+    </table>
+  `;
+}
+
+// ============================================================
 // EXPORT CSV
 // ============================================================
 function exportCSV() {
-  const headers = ["Nom","Sexe","Age","Structure","Periode","Tache","Precision_Autre","Litres","Tetes","Distance_km","Heures_jour","Jours","Rem_lait","Rem_tete","Rem_distance","Rem_heures","Sous_total_activite","Total_personne","Tranche_age","Modalite_gestion"];
+  const headers = ["Nom","Sexe","Age","Structure","Periode","Date_pointage","Activite","Unite","Quantite","Tarif_unitaire","Remuneration","Prix_vente_unitaire","Recette_vente","Total_personne","Bonus_personne","Tranche_age","Modalite_gestion"];
   const lines = [headers.join(";")];
   state.entries.forEach(e => {
     const c = calcEntry(e, state.params);
-    const activites = e.activites && e.activites.length ? e.activites : (e.tache ? [{ type: e.tache, litres: e.litres, tetes: e.tetes, distance: e.distance, heures: e.heures, jours: e.jours }] : [{}]);
+    const activites = e.activites && e.activites.length ? e.activites : [{}];
     activites.forEach(a => {
-      const ac = calcActivity(a, state.params);
-      const litresCsv = TACHES_AVEC_LITRES.includes(a.type) ? a.litres : "";
-      const tetesCsv = TACHES_AVEC_TETES.includes(a.type) ? a.tetes : "";
+      const ac = calcActivity(a, e, state.params);
+      const def = trouverActivite(a.activiteId);
       const row = [
-        e.nom, e.sexe, e.age, e.structure, e.periode,
-        a.type || "", a.precision || "",
-        litresCsv, tetesCsv, a.distance, a.heures, a.jours,
-        Math.round(ac.remLait), Math.round(ac.remTete), Math.round(ac.remDistance), Math.round(ac.remHeures),
-        Math.round(ac.total), Math.round(c.total), c.tranche, c.modalite,
+        e.nom, e.sexe, e.age, e.structure, e.periode, a.date || "",
+        def ? def.nom : (a.ancienType || ""), def ? UNITES[def.unite] : "",
+        ac.quantite, ac.tarif, Math.round(ac.remuneration),
+        a.prixUnitaire || "", Math.round(ac.recette),
+        Math.round(c.total), Math.round(c.bonus), c.tranche, c.modalite,
       ].map(v => `"${(v ?? "").toString().replace(/"/g,'""')}"`);
       lines.push(row.join(";"));
     });
@@ -1178,6 +1577,11 @@ function buildBulletinPDFBytes(entryData) {
   doc.rect(doc.marginX - 6, boxY2, fullW + 12, boxY1 - boxY2 + 20);
   doc.space(14);
 
+  if (entryData.recette) {
+    doc.text("Recette des ventes enregistrées (hors rémunération) : " + fmtPdf(entryData.recette) + " FCFA", { size: 9, italic: true });
+    doc.space(6);
+  }
+
   if (entryData.modalite) {
     doc.text("Modalité de gestion recommandée : " + entryData.modalite, { size: 9 });
     doc.space(6);
@@ -1215,25 +1619,23 @@ function downloadBulletinPDF(id) {
   const sexeLabel = e.sexe === "F" ? "Femme" : (e.sexe === "H" ? "Homme" : "—");
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
   const montantLettres = numberToFrenchWords(c.total) + " francs CFA";
-  const activites = e.activites && e.activites.length ? e.activites : (e.tache ? [{ type: e.tache, litres: e.litres, tetes: e.tetes, distance: e.distance, heures: e.heures, jours: e.jours }] : []);
+  const activites = e.activites || [];
 
-  const groups = aggregateActivites(activites, p);
+  const groups = aggregateActivites(activites, e, p);
   const rows = [];
   groups.forEach(g => {
-    const label = g.type === "Autre" && g.precision ? "Autre : " + g.precision : (g.type || "Activité");
-    if (g.litres && g.remLait) rows.push({ label: label + " — Lait collecté", qte: fmtQty(g.litres) + " L", tarif: fmtPdf(p.litre) + " FCFA", montantVal: g.remLait });
-    if (g.tetes && g.remTete) rows.push({ label: label + " — Bétail gardé", qte: fmtQty(g.tetes) + " tête(s)", tarif: fmtPdf(p.tete) + " FCFA", montantVal: g.remTete });
-    if (g.distance && g.remDistance) rows.push({ label: label + " — Déplacement", qte: fmtQty(g.distance) + " km", tarif: fmtPdf(p.km) + " FCFA", montantVal: g.remDistance });
-    if (g.heuresTotal && g.remHeures) {
-      const tarifEff = g.remHeures / g.heuresTotal;
-      rows.push({ label: label + " — Temps de travail", qte: fmtQty(g.heuresTotal) + " h (" + fmtQty(g.joursCount) + " j pointés)", tarif: fmtPdf(tarifEff) + " FCFA", montantVal: g.remHeures });
-    }
+    if (!g.quantite) return;
+    const tarifEff = g.quantite ? g.remuneration / g.quantite : 0;
+    rows.push({ label: g.nom, qte: fmtQty(g.quantite) + " " + UNITES[g.unite], tarif: fmtPdf(tarifEff) + " FCFA", montantVal: g.remuneration });
   });
+  if (c.bonus) {
+    rows.push({ label: "Bonus journalier (plafond " + fmtPdf(p.bonusPlafondJour) + " FCFA/j)", qte: "—", tarif: "—", montantVal: c.bonus });
+  }
 
   const bytes = buildBulletinPDFBytes({
     nom: e.nom, sexeLabel, age: e.age, structure: e.structure,
     periode: formatPeriode(e.periode), rows, montantLettres,
-    modalite: c.modalite, dateStr: today,
+    modalite: c.modalite, dateStr: today, recette: c.recette,
   });
 
   const blob = new Blob([bytes], { type: "application/pdf" });
@@ -1257,24 +1659,19 @@ function printBulletin(id) {
   const sexeLabel = e.sexe === "F" ? "Femme" : (e.sexe === "H" ? "Homme" : "—");
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
   const montantLettres = numberToFrenchWords(c.total) + " francs CFA";
-  const activites = e.activites && e.activites.length ? e.activites : (e.tache ? [{ type: e.tache, litres: e.litres, tetes: e.tetes, distance: e.distance, heures: e.heures, jours: e.jours }] : []);
+  const activites = e.activites || [];
 
   function ligne(designation, qte, tarif, montant) {
     if (!qte || montant === 0) return "";
     return `<tr><td>${designation}</td><td>${qte}</td><td>${fmt(tarif)} FCFA</td><td>${fmt(montant)} FCFA</td></tr>`;
   }
 
-  const groups = aggregateActivites(activites, p);
+  const groups = aggregateActivites(activites, e, p);
   const activitesRows = groups.map(g => {
-    const label = g.type === "Autre" && g.precision ? "Autre : " + escapeHtml(g.precision) : escapeHtml(g.type || "Activité");
-    const tarifEff = g.heuresTotal ? g.remHeures / g.heuresTotal : 0;
-    return [
-      ligne(label + " — Lait collecté", g.litres ? fmtQty(g.litres) + " L" : "", p.litre, g.remLait),
-      ligne(label + " — Bétail gardé", g.tetes ? fmtQty(g.tetes) + " tête(s)" : "", p.tete, g.remTete),
-      ligne(label + " — Déplacement", g.distance ? fmtQty(g.distance) + " km" : "", p.km, g.remDistance),
-      ligne(label + " — Temps de travail", g.heuresTotal ? fmtQty(g.heuresTotal) + " h (" + fmtQty(g.joursCount) + " j pointés)" : "", tarifEff, g.remHeures),
-    ].join("");
-  }).join("");
+    if (!g.quantite) return "";
+    const tarifEff = g.quantite ? g.remuneration / g.quantite : 0;
+    return ligne(escapeHtml(g.nom), fmtQty(g.quantite) + " " + UNITES[g.unite], tarifEff, g.remuneration);
+  }).join("") + (c.bonus ? `<tr><td>Bonus journalier (plafond ${fmt(p.bonusPlafondJour)} FCFA/j)</td><td>—</td><td>—</td><td>${fmt(c.bonus)} FCFA</td></tr>` : "");
 
   const html = `
     <div class="b-header">
@@ -1302,6 +1699,7 @@ function printBulletin(id) {
       <div class="b-row b-lettres">Montant en lettres : <b>${montantLettres}</b></div>
     </div>
 
+    ${c.recette ? `<div class="b-modalite">Recette des ventes enregistrées (hors rémunération du travailleur) : ${fmt(c.recette)} FCFA</div>` : ""}
     ${c.modalite ? `<div class="b-modalite">Modalité de gestion recommandée (${escapeHtml(c.tranche)}) : ${escapeHtml(c.modalite)}</div>` : ""}
 
     <div class="b-date">Fait le ${today}</div>
@@ -1325,6 +1723,7 @@ fillParamsForm();
 resetActivities();
 renderEntries();
 renderSynthese();
+if (window.__toastEnAttente) { showToast(window.__toastEnAttente); window.__toastEnAttente = null; }
 
 // Active la mise en cache hors ligne si l'app est ouverte via http(s) (ex : hébergée en ligne
 // ou via un serveur local). Sans effet si le fichier est ouvert directement (file://) — l'app
