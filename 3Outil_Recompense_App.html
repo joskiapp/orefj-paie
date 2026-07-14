@@ -232,6 +232,12 @@
       <div id="activities-container"></div>
       <button type="button" class="btn btn-secondary" style="width:100%; margin-top:8px;" onclick="addActivityBlock()">+ Ajouter une autre activité</button>
 
+      <div class="synth-grid" style="grid-template-columns:1fr 1fr 1fr; margin-top:14px;">
+        <div class="synth-box"><div class="num" id="live-brut">0</div><div class="lbl">Rémunération (hors bonus)</div></div>
+        <div class="synth-box"><div class="num" id="live-couts">0</div><div class="lbl">Coûts</div></div>
+        <div class="synth-box"><div class="num" id="live-net">0</div><div class="lbl">Bénéfice net</div></div>
+      </div>
+
       <button class="btn btn-primary" onclick="saveEntry()" id="save-btn">Créer le compte</button>
     </div>
 
@@ -328,6 +334,15 @@
         <div class="synth-box"><div class="num" id="s-total-personnes">0</div><div class="lbl">Personnes recensées</div></div>
         <div class="synth-box"><div class="num" id="s-total-fcfa">0</div><div class="lbl">Total récompenses (FCFA)</div></div>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>Détail financier</h2>
+      <table>
+        <tr><td>Recettes brutes (rémunération + bonus)</td><td id="s-total-brut">0</td></tr>
+        <tr><td>Coûts (transport + autres frais)</td><td id="s-total-couts">0</td></tr>
+        <tr><td><b>Bénéfice net (rémunération totale versée)</b></td><td><b id="s-total-net">0</b></td></tr>
+      </table>
     </div>
 
     <div class="card">
@@ -472,8 +487,15 @@ function activitesParDefaut() {
     nouvelleActivite("transformation_fromage", "Transformation en fromage", "kg", false, 200),
     nouvelleActivite("vente_fromage", "Vente de fromage", "kg", true, 200),
     nouvelleActivite("vente_betail", "Vente de bétail", "tete", true, 500),
-    nouvelleActivite("autres_produits", "Autres produits", "unite", true, 0),
+    nouvelleActivite("autres_produits", "Autres", "unite", true, 0),
   ];
+}
+
+// Renomme l'activité "Autres produits" en "Autres" pour les installations déjà initialisées
+// avant ce changement (ne touche pas au nom si l'administrateur l'a déjà personnalisé).
+function renommerAutresProduits() {
+  const act = (state.activites || []).find(a => a.id === "autres_produits");
+  if (act && act.nom === "Autres produits") act.nom = "Autres";
 }
 
 // Ajoute au catalogue existant les activités introduites après la première mise en service
@@ -570,7 +592,10 @@ migrerVersActivitesMultiples();
 if (!state.activites) state.activites = activitesParDefaut();
 const nbActivitesAvant = state.activites.length;
 ajouterActivitesManquantes();
-if (state.activites.length !== nbActivitesAvant) saveState();
+const nomAutresAvant = (state.activites.find(a => a.id === "autres_produits") || {}).nom;
+renommerAutresProduits();
+const nomAutresChange = nomAutresAvant !== (state.activites.find(a => a.id === "autres_produits") || {}).nom;
+if (state.activites.length !== nbActivitesAvant || nomAutresChange) saveState();
 
 let editingId = null;
 
@@ -627,10 +652,23 @@ function calcActivity(a, personne, params) {
   const def = trouverActivite(a.activiteId);
   const tranche = trancheAgeDe(parseFloat(personne.age), params);
   const tarif = tarifPour(a.activiteId, personne.sexe, tranche);
-  const remuneration = quantite * tarif;
   const prixUnitaire = parseFloat(a.prixUnitaire) || 0;
   const recette = (def && def.typeVente) ? quantite * prixUnitaire : 0;
-  return { quantite, tarif, remuneration, recette, tranche, unite: def ? def.unite : "" };
+
+  // Vente uniquement : mode alternatif où la rémunération du travailleur est un pourcentage
+  // de la recette de vente, au lieu du tarif fixe du barème sexe/âge.
+  const modePourcentage = !!(def && def.typeVente && a.modePaiementVente === "pourcentage");
+  const pourcentageVente = parseFloat(a.pourcentageVente) || 0;
+  const remuneration = modePourcentage ? (recette * pourcentageVente / 100) : (quantite * tarif);
+
+  const fraisTransport = parseFloat(a.fraisTransport) || 0;
+  const fraisAutres = parseFloat(a.fraisAutres) || 0;
+  const couts = fraisTransport + fraisAutres;
+
+  return {
+    quantite, tarif, remuneration, recette, tranche, unite: def ? def.unite : "",
+    modePourcentage, pourcentageVente, fraisTransport, fraisAutres, couts,
+  };
 }
 
 // Bonus journalier : pour chaque jour pointé, chaque activité ayant un objectif/seuil défini
@@ -661,14 +699,16 @@ function calculerBonus(activites, params) {
 
 function calcEntry(e, params) {
   const activites = e.activites && e.activites.length ? e.activites : [];
-  let remuneration = 0, recette = 0;
+  let remuneration = 0, recette = 0, couts = 0;
   activites.forEach(a => {
     const c = calcActivity(a, e, params);
     remuneration += c.remuneration;
     recette += c.recette;
+    couts += c.couts;
   });
   const bonus = calculerBonus(activites, params);
-  const total = remuneration + bonus;
+  const revenuBrut = remuneration + bonus;
+  const total = revenuBrut - couts; // bénéfice net = rémunération effectivement versée
 
   let tranche = "";
   let modalite = "";
@@ -688,7 +728,7 @@ function calcEntry(e, params) {
       modalite = "Gestion autonome (adulte)";
     }
   }
-  return { remuneration, recette, bonus, total, tranche, modalite };
+  return { remuneration, recette, bonus, couts, revenuBrut, total, tranche, modalite };
 }
 
 // Regroupe les activités (ex: plusieurs pointages quotidiens de "Traite") par activité,
@@ -699,14 +739,15 @@ function aggregateActivites(activites, personne, params) {
   const groups = {};
   const order = [];
   activites.forEach(a => {
-    const key = a.activiteId || "inconnue";
+    const key = (a.activiteId || "inconnue") + (a.modePaiementVente === "pourcentage" ? ":pct" : "");
     if (!groups[key]) {
       const def = trouverActivite(a.activiteId);
       groups[key] = {
         activiteId: a.activiteId,
         nom: def ? def.nom : (a.ancienType || "Activité (ancienne, non reconnue)"),
         unite: def ? def.unite : "unite", typeVente: def ? def.typeVente : false,
-        quantite: 0, remuneration: 0, recette: 0, joursCount: 0,
+        modePourcentage: a.modePaiementVente === "pourcentage",
+        quantite: 0, remuneration: 0, recette: 0, couts: 0, joursCount: 0,
       };
       order.push(key);
     }
@@ -715,6 +756,7 @@ function aggregateActivites(activites, personne, params) {
     g.quantite += c.quantite;
     g.remuneration += c.remuneration;
     g.recette += c.recette;
+    g.couts += c.couts;
     if (a.date) g.joursCount += 1;
   });
   return order.map(key => groups[key]);
@@ -758,6 +800,7 @@ function activityBlockHTML(idx, a) {
   const def = trouverActivite(a.activiteId);
   const isVente = def ? def.typeVente : false;
   const uniteLabel = def ? UNITES[def.unite] : "unité(s)";
+  const modePaiementVente = a.modePaiementVente || "fixe";
   const optionsHtml = (state.activites || []).map(act =>
     `<option value="${act.id}" ${a.activiteId === act.id ? "selected" : ""}>${escapeHtml(act.nom)}</option>`
   ).join("");
@@ -781,7 +824,31 @@ function activityBlockHTML(idx, a) {
       <div class="precision-row${isVente ? " show" : ""}" id="prixunitaire-row-${idx}">
         <label>Prix unitaire de vente (FCFA)</label>
         <input id="act-prixunitaire-${idx}" type="number" min="0" inputmode="numeric" value="${a.prixUnitaire || ""}">
-        <span class="param-note">Sert au suivi de la recette de la ferme — n'affecte pas la rémunération du travailleur, calculée séparément selon le tarif de l'activité.</span>
+        <span class="param-note">Sert au suivi de la recette de la ferme.</span>
+      </div>
+
+      <div class="precision-row${isVente ? " show" : ""}" id="modevente-row-${idx}">
+        <label>Mode de rémunération du travailleur pour cette vente</label>
+        <select id="act-modevente-${idx}" onchange="onActiviteChange(${idx})">
+          <option value="fixe" ${modePaiementVente==="fixe"?"selected":""}>Tarif fixe (barème sexe/âge)</option>
+          <option value="pourcentage" ${modePaiementVente==="pourcentage"?"selected":""}>Pourcentage de la recette</option>
+        </select>
+      </div>
+      <div class="precision-row${isVente && modePaiementVente==="pourcentage" ? " show":""}" id="pourcentagevente-row-${idx}">
+        <label>Pourcentage de la recette revenant au travailleur (min. 5 %)</label>
+        <input id="act-pourcentagevente-${idx}" type="number" min="5" max="100" step="0.1" inputmode="decimal" value="${a.pourcentageVente || ""}">
+      </div>
+
+      <h3 style="margin-top:14px;">Frais liés à ce pointage</h3>
+      <div class="row2">
+        <div>
+          <label>Frais de transport (FCFA)</label>
+          <input id="act-fraistransport-${idx}" type="number" min="0" inputmode="numeric" value="${a.fraisTransport || ""}">
+        </div>
+        <div>
+          <label>Autres frais (FCFA)</label>
+          <input id="act-fraisautres-${idx}" type="number" min="0" inputmode="numeric" value="${a.fraisAutres || ""}">
+        </div>
       </div>
     </div>`;
 }
@@ -789,9 +856,15 @@ function activityBlockHTML(idx, a) {
 function onActiviteChange(idx) {
   const activiteId = document.getElementById("act-activite-" + idx).value;
   const def = trouverActivite(activiteId);
+  const isVente = !!(def && def.typeVente);
+  const modeSel = document.getElementById("act-modevente-" + idx);
+  const modePaiementVente = modeSel ? modeSel.value : "fixe";
   const uniteLabel = def ? UNITES[def.unite] : "unité(s)";
   document.getElementById("act-quantite-label-" + idx).textContent = "Quantité (" + uniteLabel + ")";
-  document.getElementById("prixunitaire-row-" + idx).classList.toggle("show", !!(def && def.typeVente));
+  document.getElementById("prixunitaire-row-" + idx).classList.toggle("show", isVente);
+  document.getElementById("modevente-row-" + idx).classList.toggle("show", isVente);
+  document.getElementById("pourcentagevente-row-" + idx).classList.toggle("show", isVente && modePaiementVente === "pourcentage");
+  updateLivePreview();
 }
 
 function todayISO() {
@@ -804,6 +877,7 @@ function addActivityBlock(a) {
   const container = document.getElementById("activities-container");
   const data = a || { date: todayISO() };
   container.insertAdjacentHTML("beforeend", activityBlockHTML(idx, data));
+  updateLivePreview();
 }
 
 function removeActivityBlock(idx) {
@@ -812,6 +886,7 @@ function removeActivityBlock(idx) {
   const container = document.getElementById("activities-container");
   if (container.children.length <= 1) { showToast("Il faut garder au moins une activité."); return; }
   el.remove();
+  updateLivePreview();
 }
 
 function collectActivitiesFromForm() {
@@ -824,11 +899,31 @@ function collectActivitiesFromForm() {
     const quantite = document.getElementById("act-quantite-" + idx).value;
     const def = trouverActivite(activiteId);
     const prixUnitaire = (def && def.typeVente) ? document.getElementById("act-prixunitaire-" + idx).value : "";
+    const modePaiementVente = (def && def.typeVente) ? document.getElementById("act-modevente-" + idx).value : "fixe";
+    const pourcentageVente = (def && def.typeVente && modePaiementVente === "pourcentage") ? document.getElementById("act-pourcentagevente-" + idx).value : "";
+    const fraisTransport = document.getElementById("act-fraistransport-" + idx).value;
+    const fraisAutres = document.getElementById("act-fraisautres-" + idx).value;
     if (activiteId || quantite) {
-      activites.push({ date, activiteId, quantite, prixUnitaire });
+      activites.push({ date, activiteId, quantite, prixUnitaire, modePaiementVente, pourcentageVente, fraisTransport, fraisAutres });
     }
   });
   return activites;
+}
+
+function updateLivePreview() {
+  const elBrut = document.getElementById("live-brut");
+  if (!elBrut) return;
+  const activites = collectActivitiesFromForm();
+  const personne = { sexe: document.getElementById("f-sexe").value, age: document.getElementById("f-age").value };
+  let remuneration = 0, couts = 0;
+  activites.forEach(a => {
+    const c = calcActivity(a, personne, state.params);
+    remuneration += c.remuneration;
+    couts += c.couts;
+  });
+  elBrut.textContent = fmt(remuneration) + " FCFA";
+  document.getElementById("live-couts").textContent = fmt(couts) + " FCFA";
+  document.getElementById("live-net").textContent = fmt(remuneration - couts) + " FCFA";
 }
 
 function resetActivities(activites) {
@@ -839,6 +934,7 @@ function resetActivities(activites) {
   } else {
     addActivityBlock();
   }
+  updateLivePreview();
 }
 
 function clearForm() {
@@ -848,9 +944,40 @@ function clearForm() {
   document.getElementById("save-btn").textContent = "Créer le compte";
 }
 
+// Contrôles de saisie : quantités > 0, montants positifs, pourcentage de vente entre 5 % et 100 %.
+function validateActivity(a) {
+  const errs = [];
+  const def = trouverActivite(a.activiteId);
+  const nomActivite = def ? def.nom : "cette activité";
+  if (!a.activiteId) return errs;
+
+  if (!(parseFloat(a.quantite) > 0)) errs.push("La quantité pour \"" + nomActivite + "\" doit être supérieure à zéro.");
+
+  function posOrEmpty(v, champ) {
+    if (v === "" || v === undefined) return;
+    const n = parseFloat(v);
+    if (isNaN(n) || n < 0) errs.push(champ + " : la valeur doit être un nombre positif (" + nomActivite + ").");
+  }
+  posOrEmpty(a.prixUnitaire, "Le prix unitaire de vente");
+  posOrEmpty(a.fraisTransport, "Les frais de transport");
+  posOrEmpty(a.fraisAutres, "Les autres frais");
+
+  if (def && def.typeVente && a.modePaiementVente === "pourcentage") {
+    const pct = parseFloat(a.pourcentageVente);
+    if (isNaN(pct) || pct < 5 || pct > 100) errs.push("Le pourcentage de recette pour \"" + nomActivite + "\" doit être compris entre 5 % et 100 %.");
+  }
+  return errs;
+}
+
 function saveEntry() {
   const nom = document.getElementById("f-nom").value.trim();
   if (!nom) { showToast("Merci d'indiquer un nom."); return; }
+
+  const activitesSaisie = collectActivitiesFromForm();
+  for (const a of activitesSaisie) {
+    const errs = validateActivity(a);
+    if (errs.length) { showToast(errs[0]); return; }
+  }
 
   const previous = editingId ? state.entries.find(e => e.id === editingId) : null;
   const wasClosed = !!previous && previous.statut === "cloture";
@@ -862,7 +989,7 @@ function saveEntry() {
     age: document.getElementById("f-age").value,
     structure: document.getElementById("f-structure").value.trim(),
     periode: document.getElementById("f-periode").value.trim(),
-    activites: collectActivitiesFromForm(),
+    activites: activitesSaisie,
     statut: wasClosed ? "ouvert" : (previous ? previous.statut : "ouvert"),
     dateCloture: wasClosed ? "" : (previous ? previous.dateCloture : ""),
   };
@@ -980,6 +1107,7 @@ function renderEntries() {
           </div>
         </div>
         <div class="entry-total">${fmt(c.total)} FCFA${c.bonus ? ` <span style="font-size:11px;font-weight:600;color:var(--muted);">(dont ${fmt(c.bonus)} FCFA de bonus)</span>` : ""}</div>
+        ${c.couts > 0 ? `<div class="entry-sub">Rémunération brute : ${fmt(c.revenuBrut)} FCFA · Frais : ${fmt(c.couts)} FCFA</div>` : ""}
         ${c.recette ? `<div class="modalite">Recette des ventes (hors rémunération) : ${fmt(c.recette)} FCFA</div>` : ""}
         ${statutPill}
         ${c.tranche ? `<span class="pill">${c.tranche}</span>` : ""}
@@ -1168,6 +1296,12 @@ function renderSynthese() {
   const totalFcfa = calcs.reduce((s, x) => s + x.c.total, 0);
   document.getElementById("s-total-fcfa").textContent = fmt(totalFcfa);
 
+  const totalBrut = calcs.reduce((s, x) => s + x.c.revenuBrut, 0);
+  const totalCouts = calcs.reduce((s, x) => s + x.c.couts, 0);
+  document.getElementById("s-total-brut").textContent = fmt(totalBrut) + " FCFA";
+  document.getElementById("s-total-couts").textContent = fmt(totalCouts) + " FCFA";
+  document.getElementById("s-total-net").textContent = fmt(totalFcfa) + " FCFA";
+
   function sexeStats(code) {
     const rows = calcs.filter(x => x.e.sexe === code);
     const n = rows.length;
@@ -1252,38 +1386,45 @@ function genererRapport() {
     const def = trouverActivite(a.activiteId);
     const key = a.activiteId;
     if (!parActivite[key]) {
-      parActivite[key] = { nom: def ? def.nom : "Activité inconnue", unite: def ? UNITES[def.unite] : "", quantite: 0, remuneration: 0, recette: 0 };
+      parActivite[key] = { nom: def ? def.nom : "Activité inconnue", unite: def ? UNITES[def.unite] : "", quantite: 0, remuneration: 0, recette: 0, couts: 0 };
     }
     parActivite[key].quantite += c.quantite;
     parActivite[key].remuneration += c.remuneration;
     parActivite[key].recette += c.recette;
+    parActivite[key].couts += c.couts;
   });
 
   const parEmploye = {};
   lignes.forEach(({ entry, c }) => {
-    if (!parEmploye[entry.id]) parEmploye[entry.id] = { nom: entry.nom, remuneration: 0, recette: 0 };
+    if (!parEmploye[entry.id]) parEmploye[entry.id] = { nom: entry.nom, remuneration: 0, recette: 0, couts: 0 };
     parEmploye[entry.id].remuneration += c.remuneration;
     parEmploye[entry.id].recette += c.recette;
+    parEmploye[entry.id].couts += c.couts;
   });
 
   const totalRemuneration = lignes.reduce((s, l) => s + l.c.remuneration, 0);
   const totalRecette = lignes.reduce((s, l) => s + l.c.recette, 0);
+  const totalCouts = lignes.reduce((s, l) => s + l.c.couts, 0);
 
   container.innerHTML = `
     <div class="synth-grid">
       <div class="synth-box"><div class="num">${fmt(totalRemuneration)}</div><div class="lbl">Rémunérations (FCFA)</div></div>
       <div class="synth-box"><div class="num">${fmt(totalRecette)}</div><div class="lbl">Recettes de vente (FCFA)</div></div>
     </div>
+    <div class="synth-grid">
+      <div class="synth-box"><div class="num">${fmt(totalCouts)}</div><div class="lbl">Coûts (transport + autres frais)</div></div>
+      <div class="synth-box"><div class="num">${fmt(totalRemuneration - totalCouts)}</div><div class="lbl">Rémunération nette</div></div>
+    </div>
     <p class="param-note">Le bonus journalier n'est pas inclus dans ce tableau (il se calcule par journée complète et par personne, toutes activités confondues) — voir le total de chaque compte dans l'onglet Saisie.</p>
     <h3>Par activité</h3>
     <table>
-      <tr><th>Activité</th><th>Quantité</th><th>Rémunération</th><th>Recette</th></tr>
-      ${Object.values(parActivite).map(g => `<tr><td>${escapeHtml(g.nom)}</td><td>${fmtQty(g.quantite)} ${g.unite}</td><td>${fmt(g.remuneration)} FCFA</td><td>${g.recette ? fmt(g.recette) + " FCFA" : "—"}</td></tr>`).join("")}
+      <tr><th>Activité</th><th>Quantité</th><th>Rémunération</th><th>Coûts</th><th>Recette</th></tr>
+      ${Object.values(parActivite).map(g => `<tr><td>${escapeHtml(g.nom)}</td><td>${fmtQty(g.quantite)} ${g.unite}</td><td>${fmt(g.remuneration)} FCFA</td><td>${g.couts ? fmt(g.couts) + " FCFA" : "—"}</td><td>${g.recette ? fmt(g.recette) + " FCFA" : "—"}</td></tr>`).join("")}
     </table>
     <h3 style="margin-top:16px;">Par employé</h3>
     <table>
-      <tr><th>Employé</th><th>Rémunération</th><th>Recette</th></tr>
-      ${Object.values(parEmploye).map(g => `<tr><td>${escapeHtml(g.nom)}</td><td>${fmt(g.remuneration)} FCFA</td><td>${g.recette ? fmt(g.recette) + " FCFA" : "—"}</td></tr>`).join("")}
+      <tr><th>Employé</th><th>Rémunération</th><th>Coûts</th><th>Recette</th></tr>
+      ${Object.values(parEmploye).map(g => `<tr><td>${escapeHtml(g.nom)}</td><td>${fmt(g.remuneration)} FCFA</td><td>${g.couts ? fmt(g.couts) + " FCFA" : "—"}</td><td>${g.recette ? fmt(g.recette) + " FCFA" : "—"}</td></tr>`).join("")}
     </table>
   `;
 }
@@ -1292,7 +1433,11 @@ function genererRapport() {
 // EXPORT CSV
 // ============================================================
 function exportCSV() {
-  const headers = ["Nom","Sexe","Age","Structure","Periode","Date_pointage","Activite","Unite","Quantite","Tarif_unitaire","Remuneration","Prix_vente_unitaire","Recette_vente","Total_personne","Bonus_personne","Tranche_age","Modalite_gestion"];
+  const headers = ["Nom","Sexe","Age","Structure","Periode","Date_pointage","Activite","Unite","Quantite","Tarif_unitaire",
+    "Mode_paiement_vente","Pourcentage_vente","Remuneration",
+    "Prix_vente_unitaire","Recette_vente",
+    "Frais_transport","Autres_frais","Couts_pointage",
+    "Total_personne_net","Bonus_personne","Couts_personne","Tranche_age","Modalite_gestion"];
   const lines = [headers.join(";")];
   state.entries.forEach(e => {
     const c = calcEntry(e, state.params);
@@ -1303,9 +1448,12 @@ function exportCSV() {
       const row = [
         e.nom, e.sexe, e.age, e.structure, e.periode, a.date || "",
         def ? def.nom : (a.ancienType || ""), def ? UNITES[def.unite] : "",
-        ac.quantite, ac.tarif, Math.round(ac.remuneration),
+        ac.quantite, ac.tarif,
+        ac.modePourcentage ? "pourcentage" : "fixe", ac.modePourcentage ? ac.pourcentageVente : "",
+        Math.round(ac.remuneration),
         a.prixUnitaire || "", Math.round(ac.recette),
-        Math.round(c.total), Math.round(c.bonus), c.tranche, c.modalite,
+        a.fraisTransport || "", a.fraisAutres || "", Math.round(ac.couts),
+        Math.round(c.total), Math.round(c.bonus), Math.round(c.couts), c.tranche, c.modalite,
       ].map(v => `"${(v ?? "").toString().replace(/"/g,'""')}"`);
       lines.push(row.join(";"));
     });
@@ -1627,6 +1775,31 @@ function buildBulletinPDFBytes(entryData) {
   return doc.build();
 }
 
+// Construit les lignes du bulletin (une par activité agrégée + bonus + déductions de frais),
+// utilisée à la fois par le générateur PDF et l'aperçu HTML imprimable.
+function buildBulletinRows(activites, e, c, p) {
+  const groups = aggregateActivites(activites, e, p);
+  const rows = [];
+  groups.forEach(g => {
+    if (!g.quantite) return;
+    if (g.modePourcentage) {
+      const pct = g.recette ? (g.remuneration / g.recette * 100) : 0;
+      rows.push({ label: g.nom + " (% recette)", qte: fmtQty(g.recette) + " FCFA recette", tarifPct: pct, montantVal: g.remuneration });
+    } else {
+      const tarifEff = g.quantite ? g.remuneration / g.quantite : 0;
+      rows.push({ label: g.nom, qte: fmtQty(g.quantite) + " " + UNITES[g.unite], tarifVal: tarifEff, montantVal: g.remuneration });
+    }
+  });
+  if (c.bonus) {
+    rows.push({ label: "Bonus journalier (plafond " + fmtPdf(p.bonusPlafondJour) + " FCFA/j)", qte: "—", tarifVal: null, montantVal: c.bonus });
+  }
+  const totalFraisTransport = activites.reduce((s, a) => s + (parseFloat(a.fraisTransport) || 0), 0);
+  const totalFraisAutres = activites.reduce((s, a) => s + (parseFloat(a.fraisAutres) || 0), 0);
+  if (totalFraisTransport) rows.push({ label: "Frais de transport (déduction)", qte: "—", tarifVal: null, montantVal: -totalFraisTransport });
+  if (totalFraisAutres) rows.push({ label: "Autres frais (déduction)", qte: "—", tarifVal: null, montantVal: -totalFraisAutres });
+  return rows;
+}
+
 function downloadBulletinPDF(id) {
   const e = state.entries.find(x => x.id === id);
   if (!e) return;
@@ -1637,16 +1810,12 @@ function downloadBulletinPDF(id) {
   const montantLettres = numberToFrenchWords(c.total) + " francs CFA";
   const activites = e.activites || [];
 
-  const groups = aggregateActivites(activites, e, p);
-  const rows = [];
-  groups.forEach(g => {
-    if (!g.quantite) return;
-    const tarifEff = g.quantite ? g.remuneration / g.quantite : 0;
-    rows.push({ label: g.nom, qte: fmtQty(g.quantite) + " " + UNITES[g.unite], tarif: fmtPdf(tarifEff) + " FCFA", montantVal: g.remuneration });
-  });
-  if (c.bonus) {
-    rows.push({ label: "Bonus journalier (plafond " + fmtPdf(p.bonusPlafondJour) + " FCFA/j)", qte: "—", tarif: "—", montantVal: c.bonus });
-  }
+  const rows = buildBulletinRows(activites, e, c, p).map(r => ({
+    label: r.label,
+    qte: r.qte,
+    tarif: r.tarifPct !== undefined ? r.tarifPct.toFixed(1) + " %" : (r.tarifVal != null ? fmtPdf(r.tarifVal) + " FCFA" : "—"),
+    montantVal: r.montantVal,
+  }));
 
   const bytes = buildBulletinPDFBytes({
     nom: e.nom, sexeLabel, age: e.age, structure: e.structure,
@@ -1677,17 +1846,10 @@ function printBulletin(id) {
   const montantLettres = numberToFrenchWords(c.total) + " francs CFA";
   const activites = e.activites || [];
 
-  function ligne(designation, qte, tarif, montant) {
-    if (!qte || montant === 0) return "";
-    return `<tr><td>${designation}</td><td>${qte}</td><td>${fmt(tarif)} FCFA</td><td>${fmt(montant)} FCFA</td></tr>`;
-  }
-
-  const groups = aggregateActivites(activites, e, p);
-  const activitesRows = groups.map(g => {
-    if (!g.quantite) return "";
-    const tarifEff = g.quantite ? g.remuneration / g.quantite : 0;
-    return ligne(escapeHtml(g.nom), fmtQty(g.quantite) + " " + UNITES[g.unite], tarifEff, g.remuneration);
-  }).join("") + (c.bonus ? `<tr><td>Bonus journalier (plafond ${fmt(p.bonusPlafondJour)} FCFA/j)</td><td>—</td><td>—</td><td>${fmt(c.bonus)} FCFA</td></tr>` : "");
+  const activitesRows = buildBulletinRows(activites, e, c, p).map(r => {
+    const tarifStr = r.tarifPct !== undefined ? r.tarifPct.toFixed(1) + " %" : (r.tarifVal != null ? fmt(r.tarifVal) + " FCFA" : "—");
+    return `<tr><td>${escapeHtml(r.label)}</td><td>${escapeHtml(r.qte)}</td><td>${tarifStr}</td><td>${fmt(r.montantVal)} FCFA</td></tr>`;
+  }).join("");
 
   const html = `
     <div class="b-header">
@@ -1740,6 +1902,9 @@ resetActivities();
 renderEntries();
 renderSynthese();
 if (window.__toastEnAttente) { showToast(window.__toastEnAttente); window.__toastEnAttente = null; }
+document.getElementById("activities-container").addEventListener("input", updateLivePreview);
+document.getElementById("f-sexe").addEventListener("change", updateLivePreview);
+document.getElementById("f-age").addEventListener("input", updateLivePreview);
 
 // Active la mise en cache hors ligne si l'app est ouverte via http(s) (ex : hébergée en ligne
 // ou via un serveur local). Sans effet si le fichier est ouvert directement (file://) — l'app
