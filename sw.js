@@ -1,7 +1,7 @@
 // Service worker : ne sert que si l'app est un jour hébergée en http(s) — pas de rôle
 // pour l'usage local (fichier ouvert directement), qui fonctionne déjà 100% hors ligne
 // puisque toutes les données restent dans le localStorage du téléphone.
-const CACHE_NAME = "orefj-paie-v3";
+const CACHE_NAME = "orefj-paie-v4";
 const CORE_FILES = [
   "./3Outil_Recompense_App.html",
   "./manifest.json",
@@ -26,18 +26,19 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Réseau d'abord, secours par le cache : garantit que les utilisateurs en ligne reçoivent
+// toujours la dernière version publiée (contrairement à une stratégie "cache d'abord", qui
+// resterait bloquée sur une ancienne version tant que CACHE_NAME n'est pas changé), tout en
+// conservant le fonctionnement hors ligne via le cache en cas d'échec réseau.
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          return response;
-        })
-        .catch(() => cached);
-    })
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
