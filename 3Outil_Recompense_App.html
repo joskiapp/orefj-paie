@@ -982,13 +982,23 @@ function validateActivity(a) {
 }
 
 function saveEntry() {
-  const nom = document.getElementById("f-nom").value.trim();
-  if (!nom) { showToast("Merci d'indiquer un nom."); return; }
+  const nomEl = document.getElementById("f-nom");
+  const nom = nomEl.value.trim();
+  if (!nom) {
+    showToast("Merci d'indiquer un nom.");
+    nomEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    nomEl.focus();
+    return;
+  }
 
   const activitesSaisie = collectActivitiesFromForm();
   for (const a of activitesSaisie) {
     const errs = validateActivity(a);
-    if (errs.length) { showToast(errs[0]); return; }
+    if (errs.length) {
+      showToast(errs[0]);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
   }
 
   const previous = editingId ? state.entries.find(e => e.id === editingId) : null;
@@ -1006,11 +1016,13 @@ function saveEntry() {
     dateCloture: wasClosed ? "" : (previous ? previous.dateCloture : ""),
   };
 
-  if (editingId) {
-    const idx = state.entries.findIndex(e => e.id === editingId);
-    if (idx > -1) state.entries[idx] = entry;
+  const idx = editingId ? state.entries.findIndex(e => e.id === editingId) : -1;
+  if (idx > -1) {
+    state.entries[idx] = entry;
     showToast(wasClosed ? "Compte rouvert après modification." : "Fiche modifiée.");
   } else {
+    // editingId peut pointer vers une fiche qui n'existe plus (référence obsolète) : dans ce
+    // cas, on crée quand même le compte au lieu de ne rien faire silencieusement.
     state.entries.push(entry);
     showToast("Compte créé.");
   }
