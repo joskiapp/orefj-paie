@@ -69,8 +69,9 @@
   .btn-edit{background:none; color:var(--blue); border:none; font-weight:700; padding:4px 6px; font-size:12.5px;}
   .entry{
     border:1px solid var(--border); border-radius:9px; padding:10px 12px; margin-bottom:10px;
-    background:#fff;
+    background:#fff; transition:background-color .4s, border-color .4s;
   }
+  .entry.entry-just-saved{background:var(--green-bg); border-color:var(--green);}
   .entry-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;}
   .entry-actions{display:flex; flex-wrap:wrap; gap:2px; justify-content:flex-end;}
   .entry-name{font-weight:700; font-size:14px;}
@@ -238,7 +239,7 @@
         <div class="synth-box"><div class="num" id="live-net">0</div><div class="lbl">Bénéfice net</div></div>
       </div>
 
-      <button class="btn btn-primary" onclick="saveEntry()" id="save-btn">Créer le compte</button>
+      <button type="button" class="btn btn-primary" id="save-btn">Créer le compte</button>
     </div>
 
     <div class="card">
@@ -1029,6 +1030,18 @@ function saveEntry() {
   saveState();
   clearForm();
   renderEntries();
+  scrollToEntry(entry.id);
+}
+
+// Confirmation visuelle garantie : fait défiler jusqu'à la fiche qui vient d'être créée ou
+// modifiée et la met brièvement en surbrillance, pour qu'elle soit impossible à manquer même
+// si la liste des comptes est plus bas que ce qui est visible à l'écran au moment du clic.
+function scrollToEntry(id) {
+  const el = document.getElementById("entry-" + id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.classList.add("entry-just-saved");
+  setTimeout(() => el.classList.remove("entry-just-saved"), 2500);
 }
 
 function editEntry(id) {
@@ -1127,7 +1140,7 @@ function renderEntryCard(e) {
       ? `<span class="pill pill-ouvert">Compte ouvert</span>`
       : `<span class="pill pill-cloture">Compte clôturé${e.dateCloture ? " le " + escapeHtml(e.dateCloture) : ""}</span>`;
     return `
-      <div class="entry">
+      <div class="entry" id="entry-${e.id}">
         <div class="entry-top">
           <div>
             <div class="entry-name">${escapeHtml(e.nom)}</div>
@@ -1948,6 +1961,23 @@ if (window.__toastEnAttente) { showToast(window.__toastEnAttente); window.__toas
 document.getElementById("activities-container").addEventListener("input", updateLivePreview);
 document.getElementById("f-sexe").addEventListener("change", updateLivePreview);
 document.getElementById("f-age").addEventListener("input", updateLivePreview);
+
+// Sur certains navigateurs mobiles, le premier appui sur un bouton juste après avoir saisi du
+// texte dans un champ ne fait que fermer le clavier virtuel, sans déclencher l'événement "click"
+// (le clic est "absorbé"). On ajoute donc un déclenchement de secours sur "touchend", protégé
+// contre un double déclenchement si "click" a bien eu lieu par ailleurs.
+function bindTapSafe(el, handler) {
+  let lastRun = 0;
+  const run = () => {
+    const now = Date.now();
+    if (now - lastRun < 700) return;
+    lastRun = now;
+    handler();
+  };
+  el.addEventListener("click", run);
+  el.addEventListener("touchend", (e) => { e.preventDefault(); run(); }, { passive: false });
+}
+bindTapSafe(document.getElementById("save-btn"), saveEntry);
 
 // Active la mise en cache hors ligne si l'app est ouverte via http(s) (ex : hébergée en ligne
 // ou via un serveur local). Sans effet si le fichier est ouvert directement (file://) — l'app
