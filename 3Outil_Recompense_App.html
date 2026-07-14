@@ -655,19 +655,23 @@ function calcActivity(a, personne, params) {
   const prixUnitaire = parseFloat(a.prixUnitaire) || 0;
   const recette = (def && def.typeVente) ? quantite * prixUnitaire : 0;
 
-  // Vente uniquement : mode alternatif où la rémunération du travailleur est un pourcentage
-  // de la recette de vente, au lieu du tarif fixe du barème sexe/âge.
-  const modePourcentage = !!(def && def.typeVente && a.modePaiementVente === "pourcentage");
-  const pourcentageVente = parseFloat(a.pourcentageVente) || 0;
-  const remuneration = modePourcentage ? (recette * pourcentageVente / 100) : (quantite * tarif);
-
   const fraisTransport = parseFloat(a.fraisTransport) || 0;
   const fraisAutres = parseFloat(a.fraisAutres) || 0;
   const couts = fraisTransport + fraisAutres;
 
+  // Vente uniquement : mode alternatif où la rémunération du travailleur est un pourcentage
+  // du bénéfice de la vente (recette moins les frais de ce pointage), au lieu du tarif fixe
+  // du barème sexe/âge. Les frais sont donc déjà pris en compte dans ce calcul : ils ne sont
+  // pas déduits une seconde fois au niveau du compte (voir calcEntry / coutsADeduire).
+  const modePourcentage = !!(def && def.typeVente && a.modePaiementVente === "pourcentage");
+  const pourcentageVente = parseFloat(a.pourcentageVente) || 0;
+  const beneficeVente = Math.max(recette - couts, 0);
+  const remuneration = modePourcentage ? (beneficeVente * pourcentageVente / 100) : (quantite * tarif);
+  const coutsADeduire = modePourcentage ? 0 : couts;
+
   return {
     quantite, tarif, remuneration, recette, tranche, unite: def ? def.unite : "",
-    modePourcentage, pourcentageVente, fraisTransport, fraisAutres, couts,
+    modePourcentage, pourcentageVente, fraisTransport, fraisAutres, couts, coutsADeduire,
   };
 }
 
@@ -699,16 +703,20 @@ function calculerBonus(activites, params) {
 
 function calcEntry(e, params) {
   const activites = e.activites && e.activites.length ? e.activites : [];
-  let remuneration = 0, recette = 0, couts = 0;
+  let remuneration = 0, recette = 0, couts = 0, coutsADeduire = 0;
   activites.forEach(a => {
     const c = calcActivity(a, e, params);
     remuneration += c.remuneration;
     recette += c.recette;
     couts += c.couts;
+    coutsADeduire += c.coutsADeduire;
   });
   const bonus = calculerBonus(activites, params);
   const revenuBrut = remuneration + bonus;
-  const total = revenuBrut - couts; // bénéfice net = rémunération effectivement versée
+  // Pour les ventes au pourcentage, les frais du pointage sont déjà déduits dans le calcul du
+  // bénéfice servant de base à la commission (voir calcActivity) : on ne les retranche donc pas
+  // une seconde fois ici, pour éviter de compter les mêmes frais deux fois.
+  const total = revenuBrut - coutsADeduire; // bénéfice net = rémunération effectivement versée
 
   let tranche = "";
   let modalite = "";
@@ -747,7 +755,7 @@ function aggregateActivites(activites, personne, params) {
         nom: def ? def.nom : (a.ancienType || "Activité (ancienne, non reconnue)"),
         unite: def ? def.unite : "unite", typeVente: def ? def.typeVente : false,
         modePourcentage: a.modePaiementVente === "pourcentage",
-        quantite: 0, remuneration: 0, recette: 0, couts: 0, joursCount: 0,
+        quantite: 0, remuneration: 0, recette: 0, couts: 0, coutsADeduire: 0, beneficeBase: 0, joursCount: 0,
       };
       order.push(key);
     }
@@ -757,6 +765,8 @@ function aggregateActivites(activites, personne, params) {
     g.remuneration += c.remuneration;
     g.recette += c.recette;
     g.couts += c.couts;
+    g.coutsADeduire += c.coutsADeduire;
+    g.beneficeBase += Math.max(c.recette - c.couts, 0);
     if (a.date) g.joursCount += 1;
   });
   return order.map(key => groups[key]);
@@ -831,11 +841,12 @@ function activityBlockHTML(idx, a) {
         <label>Mode de rémunération du travailleur pour cette vente</label>
         <select id="act-modevente-${idx}" onchange="onActiviteChange(${idx})">
           <option value="fixe" ${modePaiementVente==="fixe"?"selected":""}>Tarif fixe (barème sexe/âge)</option>
-          <option value="pourcentage" ${modePaiementVente==="pourcentage"?"selected":""}>Pourcentage de la recette</option>
+          <option value="pourcentage" ${modePaiementVente==="pourcentage"?"selected":""}>Pourcentage du bénéfice</option>
         </select>
       </div>
       <div class="precision-row${isVente && modePaiementVente==="pourcentage" ? " show":""}" id="pourcentagevente-row-${idx}">
-        <label>Pourcentage de la recette revenant au travailleur (min. 5 %)</label>
+        <label>Pourcentage du bénéfice revenant au travailleur (min. 5 %)</label>
+        <span class="param-note">Bénéfice = recette de vente moins les frais de ce pointage.</span>
         <input id="act-pourcentagevente-${idx}" type="number" min="5" max="100" step="0.1" inputmode="decimal" value="${a.pourcentageVente || ""}">
       </div>
 
@@ -915,15 +926,16 @@ function updateLivePreview() {
   if (!elBrut) return;
   const activites = collectActivitiesFromForm();
   const personne = { sexe: document.getElementById("f-sexe").value, age: document.getElementById("f-age").value };
-  let remuneration = 0, couts = 0;
+  let remuneration = 0, couts = 0, coutsADeduire = 0;
   activites.forEach(a => {
     const c = calcActivity(a, personne, state.params);
     remuneration += c.remuneration;
     couts += c.couts;
+    coutsADeduire += c.coutsADeduire;
   });
   elBrut.textContent = fmt(remuneration) + " FCFA";
   document.getElementById("live-couts").textContent = fmt(couts) + " FCFA";
-  document.getElementById("live-net").textContent = fmt(remuneration - couts) + " FCFA";
+  document.getElementById("live-net").textContent = fmt(remuneration - coutsADeduire) + " FCFA";
 }
 
 function resetActivities(activites) {
@@ -964,7 +976,7 @@ function validateActivity(a) {
 
   if (def && def.typeVente && a.modePaiementVente === "pourcentage") {
     const pct = parseFloat(a.pourcentageVente);
-    if (isNaN(pct) || pct < 5 || pct > 100) errs.push("Le pourcentage de recette pour \"" + nomActivite + "\" doit être compris entre 5 % et 100 %.");
+    if (isNaN(pct) || pct < 5 || pct > 100) errs.push("Le pourcentage du bénéfice pour \"" + nomActivite + "\" doit être compris entre 5 % et 100 %.");
   }
   return errs;
 }
@@ -1077,6 +1089,19 @@ function renderEntries() {
   });
 
   list.innerHTML = sorted.map(e => {
+    try {
+      return renderEntryCard(e);
+    } catch (err) {
+      // Une fiche corrompue ou dans un format inattendu ne doit pas empêcher l'affichage
+      // des autres comptes : on l'affiche en dégradé plutôt que de faire planter toute la liste.
+      return `<div class="entry"><div class="entry-name">${escapeHtml(e.nom || "Compte")}</div>
+        <div class="modalite">Cette fiche n'a pas pu être affichée correctement (${escapeHtml(err.message)}). Utilisez "Exporter en CSV" pour ne pas perdre ses données, puis contactez le support.</div>
+        <button class="btn-danger" onclick="deleteEntry('${e.id}')">Suppr.</button></div>`;
+    }
+  }).join("");
+}
+
+function renderEntryCard(e) {
     const c = calcEntry(e, state.params);
     const sexeLabel = e.sexe === "F" ? "Femme" : (e.sexe === "H" ? "Homme" : "—");
     const activites = e.activites || [];
@@ -1113,7 +1138,6 @@ function renderEntries() {
         ${c.tranche ? `<span class="pill">${c.tranche}</span>` : ""}
         ${c.modalite ? `<div class="modalite">${c.modalite}</div>` : ""}
       </div>`;
-  }).join("");
 }
 
 function escapeHtml(s) {
@@ -1783,8 +1807,8 @@ function buildBulletinRows(activites, e, c, p) {
   groups.forEach(g => {
     if (!g.quantite) return;
     if (g.modePourcentage) {
-      const pct = g.recette ? (g.remuneration / g.recette * 100) : 0;
-      rows.push({ label: g.nom + " (% recette)", qte: fmtQty(g.recette) + " FCFA recette", tarifPct: pct, montantVal: g.remuneration });
+      const pct = g.beneficeBase ? (g.remuneration / g.beneficeBase * 100) : 0;
+      rows.push({ label: g.nom + " (% du bénéfice)", qte: fmtQty(g.beneficeBase) + " FCFA de bénéfice", tarifPct: pct, montantVal: g.remuneration });
     } else {
       const tarifEff = g.quantite ? g.remuneration / g.quantite : 0;
       rows.push({ label: g.nom, qte: fmtQty(g.quantite) + " " + UNITES[g.unite], tarifVal: tarifEff, montantVal: g.remuneration });
@@ -1793,8 +1817,15 @@ function buildBulletinRows(activites, e, c, p) {
   if (c.bonus) {
     rows.push({ label: "Bonus journalier (plafond " + fmtPdf(p.bonusPlafondJour) + " FCFA/j)", qte: "—", tarifVal: null, montantVal: c.bonus });
   }
-  const totalFraisTransport = activites.reduce((s, a) => s + (parseFloat(a.fraisTransport) || 0), 0);
-  const totalFraisAutres = activites.reduce((s, a) => s + (parseFloat(a.fraisAutres) || 0), 0);
+  // Les frais d'un pointage "vente au pourcentage" sont déjà pris en compte dans le calcul du
+  // bénéfice servant de base à la commission : on ne les déduit ici que pour les autres pointages,
+  // pour éviter de les compter deux fois.
+  const activitesFraisNonAbsorbes = activites.filter(a => {
+    const def = trouverActivite(a.activiteId);
+    return !(def && def.typeVente && a.modePaiementVente === "pourcentage");
+  });
+  const totalFraisTransport = activitesFraisNonAbsorbes.reduce((s, a) => s + (parseFloat(a.fraisTransport) || 0), 0);
+  const totalFraisAutres = activitesFraisNonAbsorbes.reduce((s, a) => s + (parseFloat(a.fraisAutres) || 0), 0);
   if (totalFraisTransport) rows.push({ label: "Frais de transport (déduction)", qte: "—", tarifVal: null, montantVal: -totalFraisTransport });
   if (totalFraisAutres) rows.push({ label: "Autres frais (déduction)", qte: "—", tarifVal: null, montantVal: -totalFraisAutres });
   return rows;
