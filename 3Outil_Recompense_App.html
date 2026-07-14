@@ -424,11 +424,13 @@
   <div class="tab" id="tab-aide">
     <div class="card">
       <h2>Comment utiliser l'outil</h2>
-      <div class="help-item"><b>1.</b> Dans l'onglet <b>Paramètres</b>, vérifiez ou ajustez les tarifs selon ce qui a été convenu avec les éleveurs.</div>
-      <div class="help-item"><b>2.</b> Dans l'onglet <b>Saisie</b>, ajoutez une fiche par personne. Une même personne peut cumuler plusieurs types de tâches (ex : une femme qui garde aussi le troupeau) — remplissez tous les champs qui la concernent, laissez les autres vides.</div>
-      <div class="help-item"><b>3.</b> L'onglet <b>Synthèse</b> affiche automatiquement la répartition des récompenses par sexe et par tranche d'âge, pour vérifier l'équilibre global.</div>
-      <div class="help-item"><b>4.</b> Toutes les données restent enregistrées sur ce téléphone, même sans connexion internet, même après avoir fermé l'application.</div>
-      <div class="help-item"><b>5.</b> Utilisez <b>Exporter en CSV</b> pour garder une trace ou transmettre les données à quelqu'un d'autre.</div>
+      <div class="help-item"><b>1.</b> Dans l'onglet <b>Paramètres</b>, vérifiez ou ajustez les activités et leurs tarifs selon ce qui a été convenu avec les éleveurs.</div>
+      <div class="help-item"><b>2.</b> Dans l'onglet <b>Saisie</b>, créez un compte par personne, puis ajoutez ses activités réalisées. Une même personne peut cumuler plusieurs activités — utilisez "+ Ajouter une autre activité".</div>
+      <div class="help-item"><b>3.</b> Une fois un compte créé, utilisez "+ Pointer" pour ajouter rapidement l'activité du jour, sans ressaisir l'identité.</div>
+      <div class="help-item"><b>4.</b> L'onglet <b>Synthèse</b> affiche automatiquement la répartition des récompenses par sexe et par tranche d'âge, pour vérifier l'équilibre global.</div>
+      <div class="help-item"><b>5.</b> L'onglet <b>Rapports</b> permet de filtrer les pointages par employé, activité, sexe, tranche d'âge ou période.</div>
+      <div class="help-item"><b>6.</b> Toutes les données restent enregistrées sur ce téléphone, même sans connexion internet, même après avoir fermé l'application.</div>
+      <div class="help-item"><b>7.</b> Utilisez <b>Exporter en CSV</b> pour garder une trace ou transmettre les données à quelqu'un d'autre.</div>
     </div>
     <div class="card">
       <h2>Règles de gestion selon l'âge</h2>
@@ -492,24 +494,6 @@ function activitesParDefaut() {
   ];
 }
 
-// Renomme l'activité "Autres produits" en "Autres" pour les installations déjà initialisées
-// avant ce changement (ne touche pas au nom si l'administrateur l'a déjà personnalisé).
-function renommerAutresProduits() {
-  const act = (state.activites || []).find(a => a.id === "autres_produits");
-  if (act && act.nom === "Autres produits") act.nom = "Autres";
-}
-
-// Ajoute au catalogue existant les activités introduites après la première mise en service
-// (ex : ajoutées à une date ultérieure), sans toucher aux tarifs déjà personnalisés des
-// activités existantes. S'exécute à chaque chargement, sans effet si déjà présentes.
-function ajouterActivitesManquantes() {
-  if (!state.activites) return;
-  const existants = new Set(state.activites.map(a => a.id));
-  activitesParDefaut().forEach(def => {
-    if (!existants.has(def.id)) state.activites.push(def);
-  });
-}
-
 const DEFAULT_PARAMS = {
   seuil1: 18, seuil2: 30, seuil3: 35,
   bonusPlafondJour: 200,
@@ -519,7 +503,13 @@ const DEFAULT_PARAMS = {
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (!parsed.params) parsed.params = { ...DEFAULT_PARAMS };
+      if (!parsed.activites || !parsed.activites.length) parsed.activites = activitesParDefaut();
+      if (!parsed.entries) parsed.entries = [];
+      return parsed;
+    }
   } catch (e) {}
   return { params: { ...DEFAULT_PARAMS }, activites: activitesParDefaut(), entries: [] };
 }
@@ -528,76 +518,6 @@ function saveState() {
 }
 
 let state = loadState();
-if (!state.params) state.params = { ...DEFAULT_PARAMS };
-if (state.params.bonusPlafondJour === undefined) state.params.bonusPlafondJour = 200;
-if (state.params.adminCode === undefined) state.params.adminCode = "";
-if (!state.entries) state.entries = [];
-
-// Migration : les fiches créées avant l'introduction des comptes ouverts/clôturés
-// deviennent "ouvertes" par défaut, pour bénéficier immédiatement du pointage et de la clôture.
-let migrated = false;
-state.entries.forEach(e => {
-  if (!e.statut) { e.statut = "ouvert"; migrated = true; }
-});
-if (migrated) saveState();
-
-// Migration : ancien modèle (litres/têtes/distance/heures/jours par activité, tarifs globaux)
-// -> nouveau modèle (une activité choisie dans un catalogue, une quantité, un tarif qui dépend
-// du sexe et de la tranche d'âge de la personne). Le catalogue est créé une seule fois ; les
-// anciens pointages sont réattribués du mieux possible à une activité du nouveau catalogue,
-// et une activité "Autres produits (migré)" récupère ce qui ne peut pas être réattribué
-// automatiquement (ancien "Autre" personnalisé, ou "Collecte / Vente" ambigu).
-const MIGRATION_TYPE_VERS_ACTIVITE = {
-  "Traite": "traite",
-  "Transformation": "transformation_fromage",
-  "Garde du troupeau": "garde_moutons",
-  "Collecte / Vente": "collecte_lait",
-};
-
-function migrerVersActivitesMultiples() {
-  if (state.activites && state.activites.length) return;
-  state.activites = activitesParDefaut();
-
-  state.entries.forEach(e => {
-    if (!e.activites) return;
-    e.activites = e.activites.map(a => {
-      if (a.activiteId) return a; // déjà migrée
-      let activiteId = MIGRATION_TYPE_VERS_ACTIVITE[a.type] || "autres_produits";
-      // Ancienne "Garde du troupeau" était payée par tête ; la nouvelle "Garde des moutons"
-      // est payée par jour — on reprend le nombre de jours renseigné (le plus proche du
-      // nouveau sens), pas l'ancien nombre de têtes.
-      let quantite;
-      if (a.type === "Garde du troupeau") {
-        quantite = parseFloat(a.jours) || 0;
-      } else if (a.type === "Autre") {
-        quantite = (parseFloat(a.heures) || 0) * (parseFloat(a.jours) || 0);
-      } else {
-        quantite = parseFloat(a.litres) || parseFloat(a.tetes) || 0;
-      }
-      return {
-        date: a.date || "", activiteId, quantite,
-        prixUnitaire: "", ancienType: a.type, ancienneNote: a.precision || "",
-      };
-    });
-  });
-  saveState();
-  showToastSiPossible("Données mises à jour vers le nouveau système d'activités. Vérifiez les quantités migrées.");
-}
-
-function showToastSiPossible(msg) {
-  // La fonction showToast n'existe pas encore à ce stade du script ; on diffère l'appel.
-  window.__toastEnAttente = msg;
-}
-
-migrerVersActivitesMultiples();
-if (!state.activites) state.activites = activitesParDefaut();
-const nbActivitesAvant = state.activites.length;
-ajouterActivitesManquantes();
-const nomAutresAvant = (state.activites.find(a => a.id === "autres_produits") || {}).nom;
-renommerAutresProduits();
-const nomAutresChange = nomAutresAvant !== (state.activites.find(a => a.id === "autres_produits") || {}).nom;
-if (state.activites.length !== nbActivitesAvant || nomAutresChange) saveState();
-
 let editingId = null;
 
 // ============================================================
@@ -647,7 +567,7 @@ function tarifPour(activiteId, sexe, tranche) {
 // Calcule la rémunération d'un pointage pour la personne concernée (le tarif dépend de
 // l'activité, du sexe et de la tranche d'âge). Si l'activité est une vente, la recette
 // (prix unitaire × quantité) est calculée à part : elle n'entre PAS dans ce que touche
-// le travailleur, c'est une donnée d'exploitation suivie séparément (onglet Rapports).
+// le travailleur par défaut — sauf en mode "pourcentage du bénéfice" (voir plus bas).
 function calcActivity(a, personne, params) {
   const quantite = parseFloat(a.quantite) || 0;
   const def = trouverActivite(a.activiteId);
@@ -753,7 +673,7 @@ function aggregateActivites(activites, personne, params) {
       const def = trouverActivite(a.activiteId);
       groups[key] = {
         activiteId: a.activiteId,
-        nom: def ? def.nom : (a.ancienType || "Activité (ancienne, non reconnue)"),
+        nom: def ? def.nom : "Activité inconnue",
         unite: def ? def.unite : "unite", typeVente: def ? def.typeVente : false,
         modePourcentage: a.modePaiementVente === "pourcentage",
         quantite: 0, remuneration: 0, recette: 0, couts: 0, coutsADeduire: 0, beneficeBase: 0, joursCount: 0,
@@ -1127,42 +1047,42 @@ function renderEntries() {
 }
 
 function renderEntryCard(e) {
-    const c = calcEntry(e, state.params);
-    const sexeLabel = e.sexe === "F" ? "Femme" : (e.sexe === "H" ? "Homme" : "—");
-    const activites = e.activites || [];
-    const nomsActivites = [...new Set(activites.map(a => {
-      const def = trouverActivite(a.activiteId);
-      return def ? def.nom : (a.ancienType || "");
-    }).filter(Boolean))];
-    const tags = nomsActivites.map(nom => `<span class="activity-tag">${escapeHtml(nom)}</span>`).join("");
-    const ouvert = e.statut !== "cloture";
-    const statutPill = ouvert
-      ? `<span class="pill pill-ouvert">Compte ouvert</span>`
-      : `<span class="pill pill-cloture">Compte clôturé${e.dateCloture ? " le " + escapeHtml(e.dateCloture) : ""}</span>`;
-    return `
-      <div class="entry" id="entry-${e.id}">
-        <div class="entry-top">
-          <div>
-            <div class="entry-name">${escapeHtml(e.nom)}</div>
-            <div class="entry-sub">${sexeLabel}${e.age ? " · " + e.age + " ans" : ""}</div>
-            ${tags ? `<div class="activity-tags">${tags}</div>` : ""}
-          </div>
-          <div class="entry-actions">
-            ${ouvert ? `<button class="btn-edit" onclick="pointerEntry('${e.id}')">+ Pointer</button>` : ""}
-            <button class="btn-edit" onclick="editEntry('${e.id}')">Modifier</button>
-            ${ouvert ? `<button class="btn-edit" onclick="cloturerEntry('${e.id}')">Clôturer</button>` : ""}
-            <button class="btn-edit" onclick="printBulletin('${e.id}')">Imprimer</button>
-            <button class="btn-edit" onclick="downloadBulletinPDF('${e.id}')">Télécharger PDF</button>
-            <button class="btn-danger" onclick="deleteEntry('${e.id}')">Suppr.</button>
-          </div>
+  const c = calcEntry(e, state.params);
+  const sexeLabel = e.sexe === "F" ? "Femme" : (e.sexe === "H" ? "Homme" : "—");
+  const activites = e.activites || [];
+  const nomsActivites = [...new Set(activites.map(a => {
+    const def = trouverActivite(a.activiteId);
+    return def ? def.nom : "";
+  }).filter(Boolean))];
+  const tags = nomsActivites.map(nom => `<span class="activity-tag">${escapeHtml(nom)}</span>`).join("");
+  const ouvert = e.statut !== "cloture";
+  const statutPill = ouvert
+    ? `<span class="pill pill-ouvert">Compte ouvert</span>`
+    : `<span class="pill pill-cloture">Compte clôturé${e.dateCloture ? " le " + escapeHtml(e.dateCloture) : ""}</span>`;
+  return `
+    <div class="entry" id="entry-${e.id}">
+      <div class="entry-top">
+        <div>
+          <div class="entry-name">${escapeHtml(e.nom)}</div>
+          <div class="entry-sub">${sexeLabel}${e.age ? " · " + e.age + " ans" : ""}</div>
+          ${tags ? `<div class="activity-tags">${tags}</div>` : ""}
         </div>
-        <div class="entry-total">${fmt(c.total)} FCFA${c.bonus ? ` <span style="font-size:11px;font-weight:600;color:var(--muted);">(dont ${fmt(c.bonus)} FCFA de bonus)</span>` : ""}</div>
-        ${c.couts > 0 ? `<div class="entry-sub">Rémunération brute : ${fmt(c.revenuBrut)} FCFA · Frais : ${fmt(c.couts)} FCFA</div>` : ""}
-        ${c.recette ? `<div class="modalite">Recette des ventes (hors rémunération) : ${fmt(c.recette)} FCFA</div>` : ""}
-        ${statutPill}
-        ${c.tranche ? `<span class="pill">${c.tranche}</span>` : ""}
-        ${c.modalite ? `<div class="modalite">${c.modalite}</div>` : ""}
-      </div>`;
+        <div class="entry-actions">
+          ${ouvert ? `<button class="btn-edit" onclick="pointerEntry('${e.id}')">+ Pointer</button>` : ""}
+          <button class="btn-edit" onclick="editEntry('${e.id}')">Modifier</button>
+          ${ouvert ? `<button class="btn-edit" onclick="cloturerEntry('${e.id}')">Clôturer</button>` : ""}
+          <button class="btn-edit" onclick="printBulletin('${e.id}')">Imprimer</button>
+          <button class="btn-edit" onclick="downloadBulletinPDF('${e.id}')">Télécharger PDF</button>
+          <button class="btn-danger" onclick="deleteEntry('${e.id}')">Suppr.</button>
+        </div>
+      </div>
+      <div class="entry-total">${fmt(c.total)} FCFA${c.bonus ? ` <span style="font-size:11px;font-weight:600;color:var(--muted);">(dont ${fmt(c.bonus)} FCFA de bonus)</span>` : ""}</div>
+      ${c.couts > 0 ? `<div class="entry-sub">Rémunération brute : ${fmt(c.revenuBrut)} FCFA · Frais : ${fmt(c.couts)} FCFA</div>` : ""}
+      ${c.recette ? `<div class="modalite">Recette des ventes (hors rémunération) : ${fmt(c.recette)} FCFA</div>` : ""}
+      ${statutPill}
+      ${c.tranche ? `<span class="pill">${c.tranche}</span>` : ""}
+      ${c.modalite ? `<div class="modalite">${c.modalite}</div>` : ""}
+    </div>`;
 }
 
 function escapeHtml(s) {
@@ -1496,7 +1416,7 @@ function exportCSV() {
       const def = trouverActivite(a.activiteId);
       const row = [
         e.nom, e.sexe, e.age, e.structure, e.periode, a.date || "",
-        def ? def.nom : (a.ancienType || ""), def ? UNITES[def.unite] : "",
+        def ? def.nom : "", def ? UNITES[def.unite] : "",
         ac.quantite, ac.tarif,
         ac.modePourcentage ? "pourcentage" : "fixe", ac.modePourcentage ? ac.pourcentageVente : "",
         Math.round(ac.remuneration),
@@ -1507,7 +1427,7 @@ function exportCSV() {
       lines.push(row.join(";"));
     });
   });
-  const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -1957,7 +1877,6 @@ fillParamsForm();
 resetActivities();
 renderEntries();
 renderSynthese();
-if (window.__toastEnAttente) { showToast(window.__toastEnAttente); window.__toastEnAttente = null; }
 document.getElementById("activities-container").addEventListener("input", updateLivePreview);
 document.getElementById("f-sexe").addEventListener("change", updateLivePreview);
 document.getElementById("f-age").addEventListener("input", updateLivePreview);
